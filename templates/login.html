@@ -1,0 +1,18 @@
+{% extends "auth_base.html" %}
+{% block title %}Sign in · Pingwatch{% endblock %}
+{% block heading %}
+<h1 data-i18n="auth.welcome">Welcome back to Pingwatch!</h1>
+<p class="lede" data-i18n="auth.continue">Log in to continue</p>
+{% endblock %}
+{% block content %}
+<form id="login-form">
+  <label><span data-i18n="auth.email">Email</span><input name="username" type="text" required autocomplete="username" placeholder="me@example.com" /></label>
+  <label><span data-i18n="auth.password">Password</span><input name="password" type="password" required autocomplete="current-password" placeholder="••••••••" /></label>
+  <p class="form-error" id="form-error" hidden></p>
+  <button class="primary" type="submit" data-i18n="auth.login">Login</button>
+</form>
+<p class="auth-alt"><span data-i18n="auth.need_account">Need an account?</span> <a href="/request-access" data-i18n="auth.request_access">Request access</a></p>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/login.js?v=7"></script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Settings · Pingwatch{% endblock %}
+{% block content %}
+<form id="prefs-form" class="settings-grid">
+  <fieldset>
+    <legend>Appearance</legend>
+    <p class="muted">Theme applies immediately on this browser.</p>
+    <div class="theme-row">
+      <button type="button" class="ghost theme-choice" data-theme="light">Light</button>
+      <button type="button" class="ghost theme-choice" data-theme="dark">Dark</button>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Display timezone</legend>
+    <label>IANA timezone<input name="timezone" value="{{ user.timezone or 'UTC' }}" placeholder="UTC or Asia/Kolkata" required /></label>
+    <p class="muted">Used for clocks and timestamps across Pingwatch.</p>
+    <p class="form-error" id="prefs-error" hidden></p>
+    <p class="ok" id="prefs-ok" hidden>Settings saved</p>
+    <button class="primary" type="submit">Save settings</button>
+  </fieldset>
+  <fieldset>
+    <legend>About</legend>
+    <p><strong>Pingwatch</strong> <span id="settings-version">1.2.0</span></p>
+    <p class="muted">Simple monitoring for the infrastructure that matters.</p>
+  </fieldset>
+</form>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/settings.js?v=5"></script>
+{% endblock %}

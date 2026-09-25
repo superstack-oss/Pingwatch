@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{% if archive %}Archives{% else %}Incidents{% endif %} · Pingwatch{% endblock %}
+{% block page_class %}{% if archive %}archive-page{% endif %}{% endblock %}
+{% block content %}
+<section class="toolbar">
+  <select id="incident-status" data-i18n-options>
+    {% if archive %}
+    <option value="" data-i18n="incidents.archived_all">All archived</option>
+    <option value="closed_successful" data-i18n="incidents.closed_successful">Closed successful</option>
+    <option value="closed_unsuccessful" data-i18n="incidents.closed_unsuccessful">Closed unsuccessful</option>
+    <option value="cancelled" data-i18n="incidents.cancelled">Cancelled</option>
+    <option value="auto_resolved" data-i18n="incidents.auto_resolved">Auto resolved</option>
+    {% else %}
+    <option value="" data-i18n="incidents.live_all">All open</option>
+    <option value="open" data-i18n="incidents.open">Open</option>
+    <option value="active" data-i18n="incidents.active">Active</option>
+    <option value="work_in_progress" data-i18n="incidents.work_in_progress">Work in progress</option>
+    <option value="monitor" data-i18n="incidents.monitor">Monitor</option>
+    <option value="pending" data-i18n="incidents.pending">Pending</option>
+    {% endif %}
+  </select>
+  <p class="hint" id="incident-hint"></p>
+  <div class="bulk-bar" id="incident-bulk" hidden></div>
+  <p class="form-error" id="incident-error" hidden></p>
+</section>
+<section class="table-wrap">
+  <table class="entity-table incidents-table">
+    <thead>
+      <tr>
+        <th class="col-check"><input type="checkbox" class="select-all" aria-label="Select all" data-i18n-aria="common.select_all" /></th>
+        <th data-i18n="incidents.incident">Incident</th>
+        <th data-i18n="incidents.priority">Priority</th>
+        <th data-i18n="incidents.short_description">Short Description</th>
+        <th data-i18n="dash.status">Status</th>
+        <th data-i18n="incidents.created">Created At</th>
+        <th class="col-actions" data-i18n="dash.actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="incident-rows"></tbody>
+  </table>
+</section>
+<div id="incident-empty" class="state" hidden></div>
+<nav class="pager" id="incident-pager" hidden>
+  <button type="button" class="ghost" data-pager="prev" data-i18n="common.previous">Previous</button>
+  <span data-pager="label">Page 1</span>
+  <button type="button" class="ghost" data-pager="next" data-i18n="common.next">Next</button>
+</nav>
+<div class="row-dropdown" id="incident-menu" hidden role="menu"></div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/incidents.js?v=18"></script>
+{% endblock %}

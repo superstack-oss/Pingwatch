@@ -1,0 +1,21 @@
+{% extends "auth_base.html" %}
+{% block title %}Request access · Pingwatch{% endblock %}
+{% block heading %}
+<h1 data-i18n="auth.get_started">Get started with Pingwatch!</h1>
+<p class="lede" data-i18n="auth.create_continue">Create an account to continue</p>
+{% endblock %}
+{% block content %}
+<form id="request-form">
+  <label><span data-i18n="auth.name">Name</span><input name="name" required autocomplete="name" placeholder="Your name" /></label>
+  <label><span data-i18n="auth.email">Email</span><input name="email" type="email" required autocomplete="email" placeholder="me@example.com" /></label>
+  <label><span data-i18n="auth.phone">Phone</span><input name="phone" required autocomplete="tel" placeholder="+1 555 0100" /></label>
+  <label><span data-i18n="auth.password">Password</span><input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="••••••••" /></label>
+  <p class="form-error" id="form-error" hidden></p>
+  <p class="ok" id="form-ok" hidden data-i18n="auth.request_ok">Request submitted. You can sign in after an admin approves it.</p>
+  <button class="primary" type="submit" data-i18n="auth.create_account">Create account</button>
+</form>
+<p class="auth-alt"><span data-i18n="auth.have_account">Already have an account?</span> <a href="/login" data-i18n="auth.login">Login</a></p>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/request.js?v=7"></script>
+{% endblock %}

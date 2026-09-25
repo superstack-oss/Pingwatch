@@ -1,0 +1,38 @@
+[
+  {
+    "version": "1.2.0",
+    "date": "September 2026",
+    "current": true,
+    "notes": [
+      "Infrastructure insights when a device is down: classified ICMP error, where it is failing, likely cause, and what to check.",
+      "Device types for SAN (Brocade/Cisco MDS) and network switches (Cisco/Aruba) alongside storage arrays, NAS, and servers.",
+      "On-demand Investigate uses kind-specific TCP ports and can distinguish ICMP filtering from a real outage.",
+      "Fleet sweep concurrency raised so hundreds of ping targets stay timely. Traceroute stays on-demand only."
+    ]
+  },
+  {
+    "version": "1.1.0",
+    "date": "September 2026",
+    "current": false,
+    "notes": [
+      "Finder catalogs for NAS shares and storage volumes, with CSV import and templates.",
+      "Six-digit Item IDs, sequence numbers, and a device actions menu including service mode.",
+      "Admin appearance settings: light/dark theme and 19 interface languages.",
+      "Circular account menu with Profile, About, and Version.",
+      "Profile page with account lifecycle, approver details, and password change.",
+      "Expanded About Pingwatch copy and Superstack credits."
+    ]
+  },
+  {
+    "version": "1.0.0",
+    "date": "August 2026",
+    "current": false,
+    "notes": [
+      "ICMP uptime monitoring for NAS, storage, servers, and other endpoints.",
+      "Dashboard with live status, response-time sparkline, and filters.",
+      "Analytics overview, incidents, and per-device diagnostics.",
+      "Admin console for devices, users, access requests, audit logs, and workspace settings.",
+      "Email alerts, downtime-only notifications, and optional ServiceNow incidents."
+    ]
+  }
+]

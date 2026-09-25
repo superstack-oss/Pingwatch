@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ incident_number }} · Pingwatch{% endblock %}
+{% block page_class %}incident-page{% endblock %}
+{% block heading %}
+<h1 id="inc-heading">{{ incident_number }}</h1>
+<p class="lede" data-i18n="incidents.detail_lede">Review the incident, add work notes, and update the status.</p>
+{% endblock %}
+{% block content %}
+<nav class="crumb" aria-label="Breadcrumb">
+  <a href="/incidents" id="inc-crumb-home" data-i18n="nav.incidents">Incidents</a>
+  <span aria-hidden="true">›</span>
+  <span id="inc-crumb">{{ incident_number }}</span>
+</nav>
+<p class="form-error" id="incident-error" hidden></p>
+<section class="incident-form" id="incident-detail" data-incident-id="{{ incident_id }}">
+  <p class="muted" data-i18n="incidents.loading">Loading incident…</p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/incident.js?v=5"></script>
+{% endblock %}

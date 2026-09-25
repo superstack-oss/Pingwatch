@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Notifications · Pingwatch{% endblock %}
+{% block content %}
+<section class="table-wrap">
+  <table class="entity-table notifications-table">
+    <thead>
+      <tr>
+        <th data-i18n="notif.item">Notification</th>
+        <th class="col-time" data-i18n="admin.time">Time</th>
+      </tr>
+    </thead>
+    <tbody id="notification-rows"></tbody>
+  </table>
+</section>
+<div id="notification-empty" class="state" hidden></div>
+<nav class="pager" id="notification-pager" hidden>
+  <button type="button" class="ghost" data-pager="prev" data-i18n="common.previous">Previous</button>
+  <span data-pager="label">Page 1</span>
+  <button type="button" class="ghost" data-pager="next" data-i18n="common.next">Next</button>
+</nav>
+{% endblock %}
+{% block extras %}
+<div class="modal" id="notif-modal" hidden>
+  <div class="dialog notif-dialog">
+    <header>
+      <h2 id="notif-modal-title"></h2>
+      <button type="button" class="ghost" id="notif-modal-close" data-i18n="common.close">Close</button>
+    </header>
+    <p class="muted" id="notif-modal-meta"></p>
+    <p class="notif-dialog-short" id="notif-modal-short"></p>
+    <div class="notif-dialog-body" id="notif-modal-body"></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/notifications.js?v=2"></script>
+{% endblock %}

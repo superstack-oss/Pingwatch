@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ title }} · Pingwatch{% endblock %}</title>
+    <link rel="icon" href="/static/favicon.svg?v=2" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Roboto+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/app.css?v=44" />
+    <script>
+      document.documentElement.dataset.theme = localStorage.getItem("pingwatch-theme") || "light";
+      document.documentElement.lang = localStorage.getItem("pingwatch-language") || "en";
+      document.documentElement.dir = document.documentElement.lang === "ar" ? "rtl" : "ltr";
+      if (sessionStorage.getItem("pw-nav") === "1") {
+        document.documentElement.classList.add("pw-enter");
+        sessionStorage.removeItem("pw-nav");
+      }
+    </script>
+  </head>
+  <body class="app-shell" data-nav="{{ nav }}">
+    {% include "nav.html" %}
+    <div class="workspace">
+      <main class="page {% block page_class %}{% endblock %}">
+        <header class="page-head">
+          <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Open menu">☰</button>
+          <div class="workspace-heading">
+            {% block heading %}
+            <h1 data-i18n="page.{{ nav }}">{{ title }}</h1>
+            {% if lede %}<p class="lede" data-i18n="page.{{ nav }}_lede">{{ lede }}</p>{% endif %}
+            {% endblock %}
+          </div>
+          <div class="workspace-tools">
+            {% block page_tools %}{% endblock %}
+            <button type="button" class="icon-btn" id="refresh" title="Refresh" aria-label="Refresh" data-i18n-title="common.refresh" data-i18n-aria="common.refresh">
+              <img src="/static/public/reload-svgrepo.svg" alt="" />
+            </button>
+            <div class="notif-wrap" id="notif-wrap">
+              <button type="button" class="icon-btn" id="notif-btn" title="Notifications" aria-label="Notifications" aria-haspopup="menu" aria-expanded="false" data-i18n-title="nav.notifications" data-i18n-aria="nav.notifications">
+                <img src="/static/public/notification-bell-new-svgrepo.svg" alt="" />
+                <span class="notif-badge" id="notif-badge" hidden>0</span>
+              </button>
+              <div class="notif-menu" id="notif-menu" hidden role="menu"></div>
+            </div>
+            <button type="button" class="icon-btn" id="theme-toggle" title="Theme" aria-label="Toggle theme" data-i18n-title="common.theme" data-i18n-aria="common.theme">
+              <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M11.1 2.2a1 1 0 0 1 1.12.2 8.2 8.2 0 0 0 9.38 9.38 1 1 0 0 1 1.2 1.2A10.2 10.2 0 1 1 10.1 2.32a1 1 0 0 1 1-.12z"/>
+              </svg>
+              <svg class="icon-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="4.1" fill="currentColor" />
+                <g stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+                  <path d="M12 2.8v2.1M12 19.1v2.1M4.4 4.4l1.5 1.5M18.1 18.1l1.5 1.5M2.8 12h2.1M19.1 12h2.1M4.4 19.6l1.5-1.5M18.1 5.9l1.5-1.5" />
+                </g>
+              </svg>
+            </button>
+            <div class="tz-chip" title="Display timezone">
+              <span class="tz-clock-icon" aria-hidden="true">
+                <img src="/static/public/clock-circle-svgrepo.svg" alt="" />
+              </span>
+              <span id="tz-clock">UTC</span>
+            </div>
+          </div>
+        </header>
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+    {% block extras %}{% endblock %}
+    <script src="/static/js/i18n.js?v=25"></script>
+    <script src="/static/js/common.js?v=28"></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

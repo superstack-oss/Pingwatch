@@ -1,0 +1,53 @@
+      <label>
+        <span data-i18n="dash.monitor">Monitor</span>
+        <select name="monitor_type" id="monitor-type">
+          <option value="ping" data-i18n="dash.monitor_ping">Ping</option>
+          <option value="tcp" data-i18n="dash.monitor_tcp">TCP Port</option>
+          <option value="dns" data-i18n="dash.monitor_dns">DNS</option>
+          <option value="websocket" data-i18n="dash.monitor_websocket">WebSocket</option>
+          <option value="grpc" data-i18n="dash.monitor_grpc">gRPC</option>
+          <option value="game" data-i18n="dash.monitor_game">Game server</option>
+        </select>
+      </label>
+      <p class="muted monitor-hint" data-monitor-hint data-i18n="dash.monitor_hint_ping">ICMP echo requests to a host or IP.</p>
+      <div class="monitor-extra" data-monitor-for="tcp websocket grpc game" hidden>
+        <label><span data-i18n="dash.port">Port</span><input name="port" type="number" min="1" max="65535" placeholder="443" /></label>
+      </div>
+      <div class="monitor-extra" data-monitor-for="dns" hidden>
+        <div class="monitor-row">
+          <label><span data-i18n="dash.record_type">Record type</span>
+            <select name="dns_qtype">
+              <option value="A">A</option>
+              <option value="AAAA">AAAA</option>
+              <option value="CNAME">CNAME</option>
+              <option value="MX">MX</option>
+              <option value="NS">NS</option>
+              <option value="TXT">TXT</option>
+              <option value="SOA">SOA</option>
+              <option value="PTR">PTR</option>
+            </select>
+          </label>
+          <label><span data-i18n="dash.resolver">Resolver</span> <em data-i18n="dash.resolver_optional">optional</em><input name="dns_nameserver" placeholder="1.1.1.1" spellcheck="false" /></label>
+        </div>
+      </div>
+      <div class="monitor-extra" data-monitor-for="websocket" hidden>
+        <div class="monitor-row">
+          <label><span data-i18n="dash.ws_scheme">Scheme</span>
+            <select name="ws_secure">
+              <option value="false">ws://</option>
+              <option value="true">wss://</option>
+            </select>
+          </label>
+          <label><span data-i18n="dash.ws_path">Path</span><input name="ws_path" placeholder="/" spellcheck="false" /></label>
+        </div>
+      </div>
+      <div class="monitor-extra" data-monitor-for="grpc" hidden>
+        <label><span data-i18n="dash.grpc_service">gRPC service</span> <em data-i18n="dash.notes_optional">optional</em><input name="grpc_service" placeholder="myservice" spellcheck="false" /></label>
+      </div>
+      <div class="monitor-extra" data-monitor-for="game" hidden>
+        <label><span data-i18n="dash.game_type">Game</span>
+          <select name="game_type">
+            <option value="">Select a game</option>
+          </select>
+        </label>
+      </div>

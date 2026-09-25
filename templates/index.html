@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Uptime · Pingwatch{% endblock %}
+{% block page_tools %}
+<button type="button" class="icon-btn admin-only" id="open-modal" hidden title="Add device" aria-label="Add device" data-i18n-title="common.add_device" data-i18n-aria="common.add_device">
+  <img src="/static/public/add-square-svgrepo.svg" alt="" />
+</button>
+<a class="icon-btn admin-only" id="device-template" href="/api/devices/template.csv" hidden download title="Download template" aria-label="Download template" data-i18n-title="dash.template" data-i18n-aria="dash.template">
+  <img src="/static/public/archive-down-minimlistic-svgrepo.svg" alt="" />
+</a>
+{% endblock %}
+{% block content %}
+<section class="stat-grid" aria-label="Fleet status">
+  <article class="stat-card">
+    <span data-i18n="status.up">Up</span>
+    <strong class="up" data-kpi="up">0</strong>
+  </article>
+  <article class="stat-card">
+    <span data-i18n="status.down">Down</span>
+    <strong class="down" data-kpi="down">0</strong>
+  </article>
+  <article class="stat-card">
+    <span data-i18n="status.warning">Warning</span>
+    <strong class="warn" data-kpi="warning">0</strong>
+  </article>
+  <article class="stat-card">
+    <span data-i18n="status.unknown">Unknown</span>
+    <strong class="unknown" data-kpi="unknown">0</strong>
+  </article>
+</section>
+
+<section class="toolbar">
+  <select id="monitor-filter" data-i18n-options>
+    <option value="" data-i18n="dash.all_monitors">All monitors</option>
+    <option value="ping" data-i18n="dash.monitor_ping">Ping</option>
+    <option value="tcp" data-i18n="dash.monitor_tcp">TCP Port</option>
+    <option value="dns" data-i18n="dash.monitor_dns">DNS</option>
+    <option value="websocket" data-i18n="dash.monitor_websocket">WebSocket</option>
+    <option value="grpc" data-i18n="dash.monitor_grpc">gRPC</option>
+    <option value="game" data-i18n="dash.monitor_game">Game server</option>
+  </select>
+  <select id="kind-filter" data-i18n-options>
+    <option value="" data-i18n="dash.all_types">All types</option>
+    <option value="nas" data-i18n="dash.nas">NAS</option>
+    <option value="storage" data-i18n="dash.storage">Storage</option>
+    <option value="san" data-i18n="dash.san">SAN</option>
+    <option value="network" data-i18n="dash.network">Network</option>
+    <option value="server" data-i18n="dash.server">Server</option>
+    <option value="other" data-i18n="dash.other">Other</option>
+  </select>
+  <select id="status-filter" data-i18n-options>
+    <option value="" data-i18n="dash.all_states">All states</option>
+    <option value="up" data-i18n="status.up">Up</option>
+    <option value="down" data-i18n="status.down">Down</option>
+    <option value="warning" data-i18n="status.warning">Warning</option>
+    <option value="unknown" data-i18n="status.unknown">Unknown</option>
+    <option value="paused" data-i18n="status.paused">Paused</option>
+  </select>
+  <p class="hint" id="hint" data-i18n="dash.loading">Loading monitors…</p>
+  <div class="bulk-bar admin-only" id="device-bulk" hidden></div>
+  <input id="search" type="search" placeholder="Search monitors…" data-i18n-placeholder="dash.search" />
+</section>
+
+<div class="table-card">
+  <section class="table-wrap" aria-live="polite">
+    <table class="entity-table">
+      <thead>
+        <tr>
+          <th class="col-check admin-only"><input type="checkbox" class="select-all" aria-label="Select all" data-i18n-aria="common.select_all" /></th>
+          <th data-sort="item_id" data-i18n="dash.item_id">CI</th>
+          <th data-sort="name" data-i18n="dash.name">Name</th>
+          <th data-sort="status" data-i18n="dash.status">Status</th>
+          <th data-i18n="dash.response">Response Time</th>
+          <th data-sort="monitor_type" data-i18n="dash.monitor">Monitor</th>
+          <th class="col-actions" data-i18n="dash.actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </section>
+  <div id="table-state" class="state" hidden></div>
+  <div class="table-footer">
+    <p class="table-count" id="table-count">0 items</p>
+    <div class="table-footer-end">
+      <p class="table-breakdown" id="table-breakdown" hidden></p>
+      <nav class="pager" id="pager" hidden>
+        <button type="button" class="ghost" id="prev-page" data-i18n="common.previous">Previous</button>
+        <span id="page-label">Page 1</span>
+        <button type="button" class="ghost" id="next-page" data-i18n="common.next">Next</button>
+      </nav>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extras %}
+<div class="modal" id="modal" hidden>
+  <div class="dialog add-device-dialog">
+    <header>
+      <h2 data-i18n="dash.add_title">Add a device</h2>
+      <button type="button" class="ghost" id="close-modal" data-i18n="common.close">Close</button>
+    </header>
+    <div class="add-bulk">
+      <div class="csv-import">
+        <div class="csv-import-copy">
+          <p class="csv-import-title" data-i18n="dash.bulk_import">Bulk import</p>
+          <p class="muted" data-i18n="dash.bulk_hint">CSV columns: Display name, Host or IP, Type, Monitor, Port, and optional Notes.</p>
+        </div>
+        <input id="device-file" type="file" accept=".csv,text/csv" hidden />
+        <div class="csv-actions">
+          <button type="button" class="primary" id="csv-upload-btn" data-i18n="dash.upload_csv">Upload CSV</button>
+          <a class="ghost" id="csv-template-btn" href="/api/devices/template.csv" download data-i18n="dash.template">Download template</a>
+        </div>
+      </div>
+      <p class="form-split" data-i18n="dash.add_or">Or add a single monitor</p>
+    </div>
+    <form id="add-form">
+      <input type="hidden" name="id" />
+      <p class="lede" data-i18n="dash.add_lede">Choose a monitor type, then fill in the target for that check.</p>
+      <label><span data-i18n="dash.display_name">Display name</span><input name="name" required maxlength="120" placeholder="Studio NAS" /></label>
+      {% include "partials/monitor_fields.html" %}
+      <label><span data-host-label data-i18n="admin.host">Host or IP</span><input name="host" required maxlength="253" placeholder="192.168.1.10" spellcheck="false" /></label>
+      <fieldset>
+        <legend data-i18n="dash.type">Type</legend>
+        <div class="kinds">
+          <label><input type="radio" name="kind" value="nas" /> <img class="kind-ico" src="/static/public/nas-svgrepo.svg" alt="" /> <span data-i18n="dash.nas">NAS</span></label>
+          <label><input type="radio" name="kind" value="storage" /> <img class="kind-ico" src="/static/public/storage-area-networks-svgrepo.svg" alt="" /> <span data-i18n="dash.storage">Storage</span></label>
+          <label><input type="radio" name="kind" value="san" /> <img class="kind-ico" src="/static/public/storage-area-networks-svgrepo.svg" alt="" /> <span data-i18n="dash.san">SAN</span></label>
+          <label><input type="radio" name="kind" value="network" /> <span data-i18n="dash.network">Network</span></label>
+          <label><input type="radio" name="kind" value="server" checked /> <img class="kind-ico" src="/static/public/server-svgrepo.svg" alt="" /> <span data-i18n="dash.server">Server</span></label>
+          <label><input type="radio" name="kind" value="other" /> <img class="kind-ico" src="/static/public/other-svgrepo.svg" alt="" /> <span data-i18n="dash.other">Other</span></label>
+        </div>
+      </fieldset>
+      <label><span data-i18n="admin.notes">Notes</span> <em data-i18n="dash.notes_optional">optional</em><input name="notes" maxlength="500" placeholder="Rack A" /></label>
+      <p class="form-error" id="form-error" hidden></p>
+      <button class="primary wide" type="submit" id="add-submit" data-i18n="dash.add_and_ping">Add and monitor</button>
+    </form>
+  </div>
+</div>
+<div class="row-dropdown" id="device-menu" hidden role="menu"></div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/app.js?v=26"></script>
+{% endblock %}

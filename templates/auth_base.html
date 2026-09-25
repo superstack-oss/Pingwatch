@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ title }} · Pingwatch{% endblock %}</title>
+    <link rel="icon" href="/static/favicon.svg?v=2" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400&family=Roboto+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/app.css?v=44" />
+    <script>
+      document.documentElement.dataset.theme = localStorage.getItem("pingwatch-theme") || "light";
+      document.documentElement.lang = localStorage.getItem("pingwatch-language") || "en";
+      document.documentElement.dir = document.documentElement.lang === "ar" ? "rtl" : "ltr";
+    </script>
+  </head>
+  <body class="auth-body">
+    <div class="auth-shell">
+      <section class="auth-panel">
+        <div class="auth-tools">
+          <label class="auth-lang">
+            <select id="lang-select" aria-label="Language" data-i18n-aria="auth.language"></select>
+          </label>
+          <button type="button" class="auth-theme" id="theme-toggle" title="Theme" aria-label="Toggle theme">
+            <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M11.1 2.2a1 1 0 0 1 1.12.2 8.2 8.2 0 0 0 9.38 9.38 1 1 0 0 1 1.2 1.2A10.2 10.2 0 1 1 10.1 2.32a1 1 0 0 1 1-.12z"/>
+            </svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="4.1" fill="currentColor" />
+              <g stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+                <path d="M12 2.8v2.1M12 19.1v2.1M4.4 4.4l1.5 1.5M18.1 18.1l1.5 1.5M2.8 12h2.1M19.1 12h2.1M4.4 19.6l1.5-1.5M18.1 5.9l1.5-1.5" />
+              </g>
+            </svg>
+          </button>
+        </div>
+        <div class="auth-form-wrap">
+          <div class="auth-form">
+            <a class="auth-logo" href="/login">
+              <img class="app-icon" src="/static/public/penguin-svgrepo-.svg" alt="" />
+              Pingwatch
+            </a>
+            {% block heading %}
+            <h1>{{ title }}</h1>
+            {% if lede %}<p class="lede">{{ lede }}</p>{% endif %}
+            {% endblock %}
+            {% block content %}{% endblock %}
+          </div>
+        </div>
+      </section>
+      <aside class="auth-hero" aria-hidden="true">
+        <div class="auth-hero-copy">
+          <p class="auth-kicker" data-i18n="auth.hero_kicker">Open-source infrastructure monitoring</p>
+          <h2 data-i18n="auth.hero_title">Watch every move your servers make.</h2>
+          <p data-i18n="auth.hero_body">Real-time uptime, response time and incident tracking - self-hosted and yours to keep.</p>
+        </div>
+        <p class="auth-version">v<span id="auth-version">1.2.0</span></p>
+      </aside>
+    </div>
+    <script src="/static/js/i18n.js?v=22"></script>
+    <script src="/static/js/common.js?v=27"></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

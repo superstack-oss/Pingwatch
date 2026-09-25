@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}User Details · Pingwatch{% endblock %}
+{% block page_class %}profile-page{% endblock %}
+{% block page_tools %}
+<nav class="profile-head-tabs" aria-label="Account sections">
+  <button type="button" class="head-tab active" data-panel="profile">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5 19a7 7 0 0 1 14 0"/></svg>
+    <span data-i18n="nav.profile">Profile</span>
+  </button>
+  <button type="button" class="head-tab" data-panel="password">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+    <span data-i18n="profile.password_tab">Password</span>
+  </button>
+</nav>
+{% endblock %}
+{% block content %}
+<section class="profile-hero">
+  <div class="profile-hero-main">
+    <span class="avatar profile" id="profile-avatar">{{ user_initials }}</span>
+    <div>
+      <div class="hero-name-row">
+        <h2 id="profile-name">{{ user.name }}</h2>
+        <span class="role-pill" id="profile-role">{% if user.role == "admin" %}Admin{% else %}User{% endif %}</span>
+        <span class="role-pill ok" id="profile-status-pill">Active</span>
+      </div>
+      <p class="hero-id"><span data-i18n="profile.user_id">User ID</span>: <span class="mono" id="profile-userid">PW-00000</span></p>
+      <p class="hero-meta">
+        <span id="hero-email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="m4 8 8 6 8-6"/></svg><span id="hero-email-text">{{ user.email }}</span></span>
+        <span id="hero-phone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 3h4l1 5-2 1a12 12 0 0 0 5 5l1-2 5 1v4a2 2 0 0 1-2 2A16 16 0 0 1 3 7a2 2 0 0 1 2-2z"/></svg><span id="hero-phone-text">{{ user.phone or "—" }}</span></span>
+        <span id="hero-since"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span data-i18n="profile.member_since">Member since</span> <span id="hero-since-text">—</span></span>
+      </p>
+    </div>
+  </div>
+  <div class="profile-hero-stats">
+    <article class="hero-stat">
+      <small data-i18n="profile.account_status">Account status</small>
+      <strong class="status-ok" id="hero-status">Active</strong>
+    </article>
+    <article class="hero-stat">
+      <small data-i18n="profile.last_sign_in">Last sign-in</small>
+      <strong id="hero-login">—</strong>
+    </article>
+    <article class="hero-stat">
+      <small data-i18n="profile.app_version">App version</small>
+      <strong id="hero-version">v1.2.0</strong>
+    </article>
+  </div>
+</section>
+
+<div id="panel-profile">
+  <div class="profile-split">
+    <section class="profile-card">
+      <header>
+        <div>
+          <h3 data-i18n="profile.details">Profile details</h3>
+          <p class="muted" data-i18n="profile.details_lede">User profile overview with editable contact information.</p>
+        </div>
+        <button type="button" class="edit-link" id="profile-edit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="m14 6 4 4"/></svg>
+          <span id="profile-edit-label" data-i18n="profile.edit">Edit</span>
+        </button>
+      </header>
+
+      <div class="detail-grid" id="profile-view">
+        <div><span class="fact-label" data-i18n="profile.username">Username</span><strong class="fact-value" id="fact-username">{{ user.username }}</strong></div>
+        <div><span class="fact-label" data-i18n="profile.full_name">Full name</span><strong class="fact-value" id="fact-name">{{ user.name }}</strong></div>
+        <div><span class="fact-label" data-i18n="auth.email">Email</span><strong class="fact-value" id="fact-email">{{ user.email }}</strong></div>
+        <div><span class="fact-label" data-i18n="admin.role">Role</span><strong class="fact-value" id="fact-role">{% if user.role == "admin" %}Admin{% else %}User{% endif %}</strong></div>
+        <div><span class="fact-label" data-i18n="auth.phone">Phone</span><strong class="fact-value" id="fact-phone">{{ user.phone or "—" }}</strong></div>
+        <div><span class="fact-label" data-i18n="profile.user_id">User ID</span><strong class="fact-value mono" id="fact-id">PW-00000</strong></div>
+      </div>
+
+      <form id="profile-form" class="detail-grid profile-edit-grid" hidden>
+        <label><span data-i18n="profile.username">Username</span><input id="edit-username" disabled /></label>
+        <label><span data-i18n="profile.full_name">Full name</span><input name="name" required maxlength="120" /></label>
+        <label><span data-i18n="auth.email">Email</span><input name="email" type="email" required maxlength="190" /></label>
+        <label><span data-i18n="admin.role">Role</span><input id="edit-role" disabled /></label>
+        <label><span data-i18n="auth.phone">Phone</span><input name="phone" maxlength="32" /></label>
+        <label><span data-i18n="profile.user_id">User ID</span><input id="edit-id" disabled /></label>
+        <div class="edit-actions">
+          <p class="form-error" id="profile-error" hidden></p>
+          <p class="ok" id="profile-ok" hidden data-i18n="profile.saved">Profile saved</p>
+          <button class="primary" type="submit" data-i18n="common.save">Save</button>
+        </div>
+      </form>
+
+      <div class="nested-box">
+        <div><span class="fact-label" data-i18n="profile.contact">Contact</span><strong class="fact-value" id="nest-phone">{{ user.phone or "—" }}</strong></div>
+        <div><span class="fact-label" data-i18n="profile.user_since">User since</span><strong class="fact-value" id="nest-since">—</strong></div>
+        <div><span class="fact-label" data-i18n="profile.approver_name">Approver name</span><strong class="fact-value" id="approver-name">—</strong></div>
+        <div><span class="fact-label" data-i18n="profile.approver_email">Approver email</span><strong class="fact-value" id="approver-email">—</strong></div>
+      </div>
+    </section>
+
+    <section class="profile-card">
+      <header>
+        <div>
+          <h3 data-i18n="profile.overview">Account overview</h3>
+          <p class="muted" data-i18n="profile.overview_lede">Lifecycle, access status, and membership details.</p>
+        </div>
+      </header>
+      <ul class="overview-list">
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5 19a7 7 0 0 1 14 0"/></svg>
+          <span><span data-i18n="profile.account_status">Account status</span>: <strong class="status-ok" id="ov-status">active</strong></span>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4z"/></svg>
+          <span><span data-i18n="profile.reviewed_by">Reviewed by</span>: <strong id="ov-reviewer">—</strong></span>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 3h4l1 5-2 1a12 12 0 0 0 5 5l1-2 5 1v4a2 2 0 0 1-2 2A16 16 0 0 1 3 7a2 2 0 0 1 2-2z"/></svg>
+          <span><span data-i18n="profile.contact">Contact</span>: <strong id="ov-phone">—</strong></span>
+        </li>
+      </ul>
+      <div class="dates-box">
+        <p class="dates-title" data-i18n="profile.dates">Important dates</p>
+        <div class="date-row"><span data-i18n="profile.created_at">Created at</span><strong id="fact-created">—</strong></div>
+        <div class="date-row"><span data-i18n="profile.updated_at">Last profile update</span><strong id="fact-updated">—</strong></div>
+        <div class="date-row"><span data-i18n="profile.password_updated">Password updated</span><strong id="fact-password-updated">—</strong></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<section id="panel-password" hidden>
+  <section class="profile-card password-card">
+    <header>
+      <div>
+        <h3 data-i18n="profile.change_password">Update password</h3>
+        <p class="muted" data-i18n="profile.change_password_lede">Choose a new password for this account.</p>
+      </div>
+    </header>
+    <form id="password-form" class="profile-form">
+      <label><span data-i18n="profile.old_password">Old password</span><input name="current_password" type="password" required autocomplete="current-password" /></label>
+      <label><span data-i18n="profile.new_password">New password</span><input name="new_password" type="password" required minlength="8" autocomplete="new-password" /></label>
+      <label><span data-i18n="profile.confirm_password">Confirm new password</span><input name="confirm_password" type="password" required minlength="8" autocomplete="new-password" /></label>
+      <p class="form-error" id="password-error" hidden></p>
+      <p class="ok" id="password-ok" hidden data-i18n="profile.password_ok">Password updated</p>
+      <button class="primary" type="submit" data-i18n="auth.save_password">Save password</button>
+    </form>
+  </section>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/profile.js?v=7"></script>
+{% endblock %}

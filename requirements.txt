@@ -1,0 +1,14 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+sqlalchemy[asyncio]==2.0.40
+aiomysql==0.2.0
+pydantic-settings==2.8.1
+jinja2==3.1.6
+python-multipart==0.0.20
+python-dotenv==1.1.0
+itsdangerous==2.2.0
+cryptography==44.0.2
+dnspython==2.7.0
+grpcio==1.71.0
+grpcio-health-checking==1.71.0
+pytest==8.3.5

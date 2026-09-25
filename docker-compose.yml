@@ -1,0 +1,64 @@
+services:
+  mysql:
+    image: mysql:8.4
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-pingwatch}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-pingwatch}
+      MYSQL_USER: ${MYSQL_USER:-pingwatch}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-pingwatch}
+    ports:
+      - "${MYSQL_PUBLISH_PORT:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    restart: unless-stopped
+
+  web:
+    build: .
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    cap_add:
+      - NET_RAW
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: ${MYSQL_USER:-pingwatch}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-pingwatch}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-pingwatch}
+      PING_INTERVAL: ${PING_INTERVAL:-30}
+      PING_TIMEOUT: ${PING_TIMEOUT:-2.0}
+      PING_CONCURRENCY: ${PING_CONCURRENCY:-40}
+      HISTORY_KEEP_DAYS: ${HISTORY_KEEP_DAYS:-31}
+      WARNING_RTT_MS: ${WARNING_RTT_MS:-200}
+      SECRET_KEY: ${SECRET_KEY:-pingwatch-dev-secret-change-me}
+      DEFAULT_ADMIN_USERNAME: ${DEFAULT_ADMIN_USERNAME:-admin}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-Password@123}
+    volumes:
+      - incident_uploads:/app/data/incident-attachments
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    stop_grace_period: 15s
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  incident_uploads:

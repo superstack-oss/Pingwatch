@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+{% block title %}Admin · Pingwatch{% endblock %}
+{% block page_class %}admin-page{% endblock %}
+{% block page_tools %}
+<button type="button" class="icon-btn" id="admin-add" title="Add device" aria-label="Add device" data-i18n-title="common.add_device" data-i18n-aria="common.add_device">
+  <img src="/static/public/add-square-svgrepo.svg" alt="" />
+</button>
+{% endblock %}
+{% block content %}
+<nav class="admin-tabs">
+  <button type="button" class="ghost active" data-tab="devices" data-i18n="admin.devices">Devices</button>
+  <button type="button" class="ghost" data-tab="users" data-i18n="admin.users">Users</button>
+  <button type="button" class="ghost" data-tab="audit" data-i18n="admin.audit">Audit logs</button>
+  <button type="button" class="ghost" data-tab="announcements" data-i18n="admin.announcements">Announcements</button>
+  <button type="button" class="ghost" data-tab="settings" data-i18n="admin.settings">Settings</button>
+</nav>
+
+<section class="admin-panel" data-panel="devices">
+  <div class="bulk-bar" id="admin-devices-bulk" hidden></div>
+  <div class="table-wrap">
+    <table class="entity-table" id="admin-devices-table">
+      <thead><tr>
+        <th class="col-check"><input type="checkbox" class="select-all" aria-label="Select all" data-i18n-aria="common.select_all" /></th>
+        <th data-i18n="dash.item_id">CI</th>
+        <th data-i18n="dash.name">Name</th>
+        <th data-i18n="admin.host_col">Host</th>
+        <th data-i18n="dash.monitor">Monitor</th>
+        <th data-i18n="dash.type">Type</th>
+        <th data-i18n="dash.status">Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="admin-devices"></tbody>
+    </table>
+  </div>
+  <nav class="pager" id="admin-devices-pager" hidden>
+    <button type="button" class="ghost" data-pager="prev" data-i18n="common.previous">Previous</button>
+    <span data-pager="label">Page 1</span>
+    <button type="button" class="ghost" data-pager="next" data-i18n="common.next">Next</button>
+  </nav>
+  <div id="admin-devices-empty" class="state" hidden></div>
+</section>
+
+<section class="admin-panel" data-panel="users" hidden>
+  <h2 data-i18n="admin.access_requests">Access requests</h2>
+  <div class="bulk-bar" id="admin-requests-bulk" hidden></div>
+  <div class="table-wrap">
+    <table class="entity-table" id="admin-requests-table">
+      <thead><tr>
+        <th class="col-check"><input type="checkbox" class="select-all" aria-label="Select all" data-i18n-aria="common.select_all" /></th>
+        <th data-i18n="dash.name">Name</th>
+        <th data-i18n="auth.email">Email</th>
+        <th data-i18n="admin.phone">Phone</th>
+        <th data-i18n="dash.status">Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="admin-requests"></tbody>
+    </table>
+  </div>
+  <nav class="pager" id="admin-requests-pager" hidden>
+    <button type="button" class="ghost" data-pager="prev" data-i18n="common.previous">Previous</button>
+    <span data-pager="label">Page 1</span>
+    <button type="button" class="ghost" data-pager="next" data-i18n="common.next">Next</button>
+  </nav>
+  <div id="admin-requests-empty" class="state" hidden></div>
+  <h2 data-i18n="admin.users">Users</h2>
+  <div class="bulk-bar" id="admin-users-bulk" hidden></div>
+  <div class="table-wrap">
+    <table class="entity-table" id="admin-users-table">
+      <thead><tr>
+        <th class="col-check"><input type="checkbox" class="select-all" aria-label="Select all" data-i18n-aria="common.select_all" /></th>
+        <th data-i18n="dash.name">Name</th>
+        <th data-i18n="admin.username">Username</th>
+        <th data-i18n="auth.email">Email</th>
+        <th data-i18n="admin.role">Role</th>
+        <th data-i18n="dash.status">Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="admin-users"></tbody>
+    </table>
+  </div>
+  <nav class="pager" id="admin-users-pager" hidden>
+    <button type="button" class="ghost" data-pager="prev" data-i18n="common.previous">Previous</button>
+    <span data-pager="label">Page 1</span>
+    <button type="button" class="ghost" data-pager="next" data-i18n="common.next">Next</button>
+  </nav>
+</section>
+
+<section class="admin-panel" data-panel="audit" hidden>
+  <div class="toolbar">
+    <input id="audit-q" placeholder="Search actor, action, detail" data-i18n-placeholder="admin.search_audit" />
+    <button class="ghost" id="audit-search" type="button" data-i18n="common.search">Search</button>
+  </div>
+  <div class="table-wrap">
+    <table class="entity-table">
+      <thead><tr>
+        <th data-i18n="admin.time">Time</th>
+        <th data-i18n="admin.actor">Actor</th>
+        <th data-i18n="admin.action">Action</th>
+        <th data-i18n="admin.detail">Detail</th>
+        <th data-i18n="admin.ip">IP</th>
+      </tr></thead>
+      <tbody id="admin-audit"></tbody>
+    </table>
+  </div>
+  <nav class="pager" id="admin-audit-pager" hidden>
+    <button type="button" class="ghost" data-pager="prev" data-i18n="common.previous">Previous</button>
+    <span data-pager="label">Page 1</span>
+    <button type="button" class="ghost" data-pager="next" data-i18n="common.next">Next</button>
+  </nav>
+  <div id="admin-audit-empty" class="state" hidden></div>
+</section>
+
+<section class="admin-panel" data-panel="announcements" hidden>
+  <form id="announce-form" class="announce-form">
+    <label><span data-i18n="admin.announce_title">Title</span><input name="title" required maxlength="120" placeholder="Maintenance window" /></label>
+    <label><span data-i18n="admin.announce_short">Short description</span><input name="short_description" required maxlength="190" placeholder="Storage maintenance starts at 22:00 UTC" /></label>
+    <label><span data-i18n="admin.announce_body">Message</span><textarea name="body" rows="4" maxlength="4000" placeholder="Optional longer details for the notifications page."></textarea></label>
+    <p class="form-error" id="announce-error" hidden></p>
+    <button class="primary" type="submit" data-i18n="admin.announce_post">Post announcement</button>
+  </form>
+  <div class="bulk-bar" id="admin-announcements-bulk" hidden></div>
+  <div class="table-wrap">
+    <table class="entity-table" id="admin-announcements-table">
+      <thead><tr>
+        <th class="col-check"><input type="checkbox" class="select-all" aria-label="Select all" data-i18n-aria="common.select_all" /></th>
+        <th data-i18n="admin.announce_title">Title</th>
+        <th data-i18n="admin.announce_short">Short description</th>
+        <th data-i18n="admin.time">Time</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="admin-announcements"></tbody>
+    </table>
+  </div>
+  <nav class="pager" id="admin-announcements-pager" hidden>
+    <button type="button" class="ghost" data-pager="prev" data-i18n="common.previous">Previous</button>
+    <span data-pager="label">Page 1</span>
+    <button type="button" class="ghost" data-pager="next" data-i18n="common.next">Next</button>
+  </nav>
+  <div id="admin-announcements-empty" class="state" hidden></div>
+</section>
+
+<section class="admin-panel" data-panel="settings" hidden>
+  <form id="settings-form" class="settings-board">
+    <article class="setting-card">
+      <div class="setting-copy">
+        <h3>
+          <span class="setting-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 4l9 5.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21v-7h6v7"/></svg>
+          </span>
+          <span data-i18n="admin.company">Company</span>
+        </h3>
+        <p data-i18n="admin.company_body">Shown under Pingwatch in the sidebar for everyone with portal access.</p>
+      </div>
+      <div class="setting-controls">
+        <label><span data-i18n="admin.company_name">Company name</span>
+          <input name="company_name" maxlength="15" placeholder="Acme Corp" />
+        </label>
+        <p class="field-hint" data-i18n="admin.company_hint">Maximum 15 characters.</p>
+      </div>
+    </article>
+
+    <article class="setting-card">
+      <div class="setting-copy">
+        <h3>
+          <span class="setting-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+          </span>
+          <span data-i18n="admin.timezone">Display Timezone</span>
+        </h3>
+        <p data-i18n="admin.timezone_body">Choose the timezone used to display all dates and times in Pingwatch.</p>
+      </div>
+      <div class="setting-controls">
+        <label><span data-i18n="admin.timezone_label">Display timezone</span>
+          <select name="timezone" id="timezone-select"></select>
+        </label>
+      </div>
+    </article>
+
+    <article class="setting-card">
+      <div class="setting-copy">
+        <h3>
+          <span class="setting-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18"/></svg>
+          </span>
+          <span data-i18n="appearance.title">Appearance</span>
+        </h3>
+        <p data-i18n="appearance.body">Switch between light and dark mode and set your preferred language.</p>
+      </div>
+      <div class="setting-controls">
+        <label><span data-i18n="appearance.theme">Theme mode</span>
+          <select id="appearance-theme" data-i18n-options>
+            <option value="light" data-i18n="appearance.light">Light</option>
+            <option value="dark" data-i18n="appearance.dark">Dark</option>
+          </select>
+        </label>
+        <label><span data-i18n="appearance.language">Language</span>
+          <select id="appearance-language"></select>
+        </label>
+      </div>
+    </article>
+
+    <article class="setting-card">
+      <div class="setting-copy">
+        <h3>
+          <span class="setting-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+          </span>
+          <span data-i18n="admin.notifications">Notifications</span>
+          <span class="admin-chip" data-i18n="admin.chip">Admin</span>
+        </h3>
+        <p data-i18n="admin.notifications_body">Configure when and how Pingwatch sends alert notifications.</p>
+      </div>
+      <div class="setting-controls">
+        <label><span data-i18n="admin.alert_email">Alert recipient email</span>
+          <input name="notify_email" type="email" placeholder="admin@company.com" />
+        </label>
+        <label class="toggle">
+          <span>
+            <strong data-i18n="admin.email_alerts">Email alerts</strong>
+            <small data-i18n="admin.email_alerts_help">Send email when a monitor status changes</small>
+          </span>
+          <input type="checkbox" name="notify_on_down" />
+        </label>
+        <label class="toggle">
+          <span>
+            <strong data-i18n="admin.downtime_only">Downtime only</strong>
+            <small data-i18n="admin.downtime_only_help">Only notify on Down events, not recovery</small>
+          </span>
+          <input type="checkbox" name="notify_downtime_only" />
+        </label>
+        <label class="toggle">
+          <span>
+            <strong data-i18n="admin.access_notify">Access requests</strong>
+            <small data-i18n="admin.access_notify_help">Email admins when someone requests access</small>
+          </span>
+          <input type="checkbox" name="notify_on_access_request" />
+        </label>
+      </div>
+    </article>
+
+    <article class="setting-card">
+      <div class="setting-copy">
+        <h3>
+          <span class="setting-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg>
+          </span>
+          <span data-i18n="admin.snow">ServiceNow Integration</span>
+          <span class="admin-chip" data-i18n="admin.chip">Admin</span>
+        </h3>
+        <p data-i18n="admin.snow_body">Connect Pingwatch to your ServiceNow instance to automatically open incidents when monitors go down.</p>
+      </div>
+      <div class="setting-controls">
+        <label class="toggle">
+          <span>
+            <strong data-i18n="admin.snow_enable">Enable ServiceNow</strong>
+            <small data-i18n="admin.snow_enable_help">Create incidents on downtime</small>
+          </span>
+          <input type="checkbox" name="servicenow_enabled" />
+        </label>
+        <label><span data-i18n="admin.snow_url">Instance URL</span>
+          <input name="servicenow_url" placeholder="https://yourinstance.service-now.com" />
+        </label>
+        <label><span data-i18n="admin.snow_user">User</span>
+          <input name="servicenow_user" autocomplete="off" />
+        </label>
+        <label><span data-i18n="admin.snow_password">Password</span>
+          <input name="servicenow_password" type="password" autocomplete="new-password" />
+        </label>
+        <div class="setting-actions">
+          <button class="ghost" type="button" id="snow-test" data-i18n="admin.snow_test">Test connection</button>
+          <p id="snow-result" class="muted"></p>
+        </div>
+      </div>
+    </article>
+
+    <article class="setting-card">
+      <div class="setting-copy">
+        <h3>
+          <span class="setting-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v12H4z"/><path d="m4 8 8 6 8-6"/></svg>
+          </span>
+          <span data-i18n="admin.smtp">Email delivery</span>
+          <span class="admin-chip" data-i18n="admin.chip">Admin</span>
+        </h3>
+        <p data-i18n="admin.smtp_body">SMTP settings used to send alert and access-request emails.</p>
+      </div>
+      <div class="setting-controls">
+        <div class="control-grid">
+          <label><span data-i18n="admin.smtp_host">Host</span><input name="smtp_host" /></label>
+          <label><span data-i18n="admin.smtp_port">Port</span><input name="smtp_port" /></label>
+        </div>
+        <label><span data-i18n="admin.smtp_user">Username</span><input name="smtp_user" autocomplete="off" /></label>
+        <label><span data-i18n="admin.smtp_password">Password</span><input name="smtp_password" type="password" autocomplete="new-password" /></label>
+        <label><span data-i18n="admin.smtp_from">From address</span><input name="smtp_from" placeholder="pingwatch@company.com" /></label>
+        <label class="toggle">
+          <span>
+            <strong data-i18n="admin.starttls">STARTTLS</strong>
+            <small data-i18n="admin.starttls_help">Encrypt the SMTP session</small>
+          </span>
+          <input type="checkbox" name="smtp_tls" />
+        </label>
+      </div>
+    </article>
+
+    <article class="setting-card">
+      <div class="setting-copy">
+        <h3>
+          <span class="setting-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 19a7 7 0 0 1 14 0"/></svg>
+          </span>
+          <span data-i18n="admin.access">Access</span>
+          <span class="admin-chip" data-i18n="admin.chip">Admin</span>
+        </h3>
+        <p data-i18n="admin.access_body">Limit who can request an account by email domain.</p>
+      </div>
+      <div class="setting-controls">
+        <label><span data-i18n="admin.allowed_domains">Allowed domains</span>
+          <input name="email_domain_restriction" placeholder="company.com, corp.local" />
+        </label>
+        <p class="field-hint" data-i18n="admin.allowed_domains_hint">Comma-separated. Leave empty to allow any domain.</p>
+      </div>
+    </article>
+
+    <article class="setting-card">
+      <div class="setting-copy">
+        <h3>
+          <span class="setting-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+          </span>
+          <span data-i18n="admin.incident_page">Incident page</span>
+        </h3>
+        <p data-i18n="admin.incident_page_body">Turn incident tracking on or off for everyone who uses Pingwatch.</p>
+      </div>
+      <div class="setting-controls">
+        <label class="toggle">
+          <span>
+            <strong data-i18n="admin.incidents_enable">Enable incidents</strong>
+            <small data-i18n="admin.incidents_enable_help">When off, Pingwatch will not generate incidents</small>
+          </span>
+          <input type="checkbox" name="incidents_enabled" />
+        </label>
+      </div>
+    </article>
+
+    <article class="setting-card">
+      <div class="setting-copy">
+        <h3>
+          <span class="setting-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          </span>
+          <span data-i18n="admin.monitoring">Monitoring</span>
+        </h3>
+        <p data-i18n="admin.monitoring_body">How often Pingwatch sweeps the fleet.</p>
+      </div>
+      <div class="setting-controls">
+        <label><span data-i18n="admin.ping_duration">Ping duration</span>
+          <select name="ping_interval">
+            <option value="1">Live</option>
+            <option value="5">5 sec</option>
+            <option value="10">10 sec</option>
+            <option value="20">20 sec</option>
+            <option value="30">30 sec</option>
+            <option value="60">1 min</option>
+            <option value="300">5 min</option>
+            <option value="900">15 min</option>
+            <option value="1800">30 min</option>
+            <option value="3600">1 hr</option>
+            <option value="7200">2 hr</option>
+            <option value="10800">3 hr</option>
+            <option value="14400">4 hr</option>
+            <option value="18000">5 hr</option>
+            <option value="21600">6 hr</option>
+            <option value="25200">7 hr</option>
+            <option value="28800">8 hr</option>
+            <option value="32400">9 hr</option>
+            <option value="36000">10 hr</option>
+            <option value="39600">11 hr</option>
+            <option value="43200">12 hr</option>
+            <option value="172800">48 hr</option>
+            <option value="259200">72 hr</option>
+          </select>
+        </label>
+      </div>
+    </article>
+
+    <article class="setting-card">
+      <div class="setting-copy">
+        <h3>
+          <span class="setting-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r="0.8" fill="currentColor" stroke="none"/></svg>
+          </span>
+          <span data-i18n="about.title">About</span>
+        </h3>
+        <p data-i18n="about.body">Simple monitoring for the infrastructure that matters.</p>
+      </div>
+      <div class="setting-controls about-copy">
+        <p><strong>Pingwatch</strong> <span id="settings-version">1.2.0</span></p>
+        <p class="muted" data-i18n="admin.about_boot">The default admin is created on first boot and must change password at first sign-in.</p>
+      </div>
+    </article>
+
+    <div class="settings-save">
+      <p class="form-error" id="settings-error" hidden></p>
+      <button class="primary" type="submit" data-i18n="admin.save_settings">Save settings</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+{% block extras %}
+<div class="modal" id="device-modal" hidden>
+  <form id="device-form" class="dialog">
+    <header>
+      <h2 id="device-form-title" data-i18n="common.add_device">Add device</h2>
+      <button type="button" class="ghost" id="close-device-modal" data-i18n="common.close">Close</button>
+    </header>
+    <input type="hidden" name="id" />
+    <label><span data-i18n="dash.name">Name</span><input name="name" required /></label>
+    {% include "partials/monitor_fields.html" %}
+    <label><span data-host-label data-i18n="admin.host">Host or IP</span><input name="host" required /></label>
+    <label><span data-i18n="dash.type">Type</span></label>
+    <div class="kinds">
+      <label><input type="radio" name="kind" value="nas" /> <img class="kind-ico" src="/static/public/nas-svgrepo.svg" alt="" /> <span data-i18n="dash.nas">NAS</span></label>
+      <label><input type="radio" name="kind" value="storage" /> <img class="kind-ico" src="/static/public/storage-area-networks-svgrepo.svg" alt="" /> <span data-i18n="dash.storage">Storage</span></label>
+      <label><input type="radio" name="kind" value="san" /> <img class="kind-ico" src="/static/public/storage-area-networks-svgrepo.svg" alt="" /> <span data-i18n="dash.san">SAN</span></label>
+      <label><input type="radio" name="kind" value="network" /> <span data-i18n="dash.network">Network</span></label>
+      <label><input type="radio" name="kind" value="server" checked /> <img class="kind-ico" src="/static/public/server-svgrepo.svg" alt="" /> <span data-i18n="dash.server">Server</span></label>
+      <label><input type="radio" name="kind" value="other" /> <img class="kind-ico" src="/static/public/other-svgrepo.svg" alt="" /> <span data-i18n="dash.other">Other</span></label>
+    </div>
+    <label><span data-i18n="admin.notes">Notes</span><input name="notes" /></label>
+    <p class="form-error" id="device-error" hidden></p>
+    <button class="primary wide" type="submit" data-i18n="common.save">Save</button>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/admin.js?v=17"></script>
+{% endblock %}

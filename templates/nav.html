@@ -1,0 +1,127 @@
+<aside class="sidebar" id="sidebar">
+  <a class="sidebar-brand" href="/">
+    <span class="app-icon-wrap" aria-hidden="true">
+      <img class="app-icon" src="/static/public/penguin-svgrepo-.svg" alt="" />
+    </span>
+    <span class="brand-copy">
+      <strong>Pingwatch</strong>
+      <small id="company-name" hidden></small>
+    </span>
+  </a>
+  <nav class="sidebar-nav" aria-label="Primary">
+    <a href="/" data-nav="dashboard">
+      <span class="nav-ico" aria-hidden="true">
+        <img src="/static/public/dashboard-layout-svgrepo.svg" alt="" />
+      </span>
+      <span data-i18n="nav.dashboard">Dashboard</span>
+    </a>
+    <a href="/analytics" data-nav="analytics">
+      <span class="nav-ico" aria-hidden="true">
+        <img src="/static/public/analytics-svgrepo.svg" alt="" />
+      </span>
+      <span data-i18n="nav.analytics">Analytics</span>
+    </a>
+    <a href="/finder" data-nav="finder">
+      <span class="nav-ico" aria-hidden="true">
+        <img src="/static/public/search-finder-magnifying-glass-svgrepo.svg" alt="" />
+      </span>
+      <span data-i18n="nav.finder">Finder</span>
+    </a>
+    <a href="/incidents" data-nav="incidents">
+      <span class="nav-ico" aria-hidden="true">
+        <img src="/static/public/flags-svgrepo.svg" alt="" />
+      </span>
+      <span data-i18n="nav.incidents">Incidents</span>
+    </a>
+  </nav>
+  <p class="sidebar-label" data-i18n="nav.portal_tools">Portal tools</p>
+  <nav class="sidebar-nav" aria-label="Portal tools">
+    <a href="/notifications" data-nav="notifications">
+      <span class="nav-ico" aria-hidden="true">
+        <img src="/static/public/notification-bell-new-svgrepo.svg" alt="" />
+      </span>
+      <span data-i18n="nav.notifications">Notifications</span>
+    </a>
+    <a href="/archives" data-nav="archives">
+      <span class="nav-ico" aria-hidden="true">
+        <img src="/static/public/archive-box-svgrepo.svg" alt="" />
+      </span>
+      <span data-i18n="nav.archives">Archives</span>
+    </a>
+    <a href="/admin" data-nav="admin" class="admin-only"{% if not user or user.role != "admin" %} hidden{% endif %}>
+      <span class="nav-ico" aria-hidden="true">
+        <img src="/static/public/system-settings-backup-svgrepo.svg" alt="" />
+      </span>
+      <span data-i18n="nav.admin">Admin</span>
+    </a>
+  </nav>
+  <div class="sidebar-foot">
+    <div class="user-menu" id="user-menu">
+      <button type="button" class="sidebar-user" id="user-menu-btn" aria-haspopup="menu" aria-expanded="false">
+        <span class="avatar" id="nav-initials">{{ user_initials }}</span>
+        <span class="user-meta">
+          <strong id="nav-user">{% if user %}{{ user.name or user.username }}{% else %}Signed in{% endif %}</strong>
+          <small id="nav-role">{% if user and user.role == "admin" %}Admin{% else %}User{% endif %}</small>
+        </span>
+        <span class="user-caret" aria-hidden="true">▴</span>
+      </button>
+      <div class="user-dropdown" id="user-dropdown" role="menu" hidden>
+        <a href="/profile" role="menuitem" id="profile-link" data-i18n="nav.profile">Profile</a>
+        <button type="button" role="menuitem" id="about-btn" data-i18n="nav.about">About</button>
+        <button type="button" role="menuitem" id="version-btn"><span data-i18n="nav.version">Version</span> <span id="app-version">1.2.0</span></button>
+        <button type="button" class="logout-btn" id="logout-btn" role="menuitem" data-i18n="nav.log_out">Log out</button>
+      </div>
+    </div>
+  </div>
+</aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+<div class="modal" id="about-modal" hidden>
+  <div class="dialog about-dialog" role="dialog" aria-labelledby="about-title">
+    <header>
+      <h2 id="about-title" data-i18n="about.title">About Pingwatch</h2>
+      <button type="button" class="ghost" id="about-close" data-i18n="about.close">Close</button>
+    </header>
+    <div class="about-body">
+      <p><strong>Pingwatch</strong> is a lightweight uptime monitoring tool for <strong>ping, TCP ports, DNS, WebSocket, gRPC, and game servers</strong> — as well as NAS devices, storage systems, servers, and network appliances.</p>
+      <p>It continuously monitors the availability and responsiveness of your endpoints, giving you a clear view of what is <strong>online, offline, degraded, or experiencing increased latency</strong>.</p>
+      <p>Instead of overwhelming you with complex infrastructure dashboards, Pingwatch focuses on the signals that matter for basic availability monitoring: <strong>reachability, response time, uptime, downtime, and historical trends</strong>.</p>
+
+      <h3>Monitor What Matters</h3>
+      <p>Pingwatch provides a simple operational view of your infrastructure:</p>
+      <ul>
+        <li><strong>Ping</strong> — ICMP echo requests to routers, firewalls, VMs, and the NAS in the office.</li>
+        <li><strong>TCP Port</strong> — Open a TCP handshake to a host and port for databases, mail, and SSH.</li>
+        <li><strong>DNS</strong> — A real lookup against the resolver you choose, alerting when the record stops resolving.</li>
+        <li><strong>WebSocket</strong> — Handshake against a ws:// or wss:// endpoint on a schedule.</li>
+        <li><strong>gRPC</strong> — The standard gRPC health protocol; anything but SERVING is down.</li>
+        <li><strong>Game server</strong> — Native queries for 100+ game types, so a dead session alerts before the complaints thread.</li>
+        <li><strong>Response time, uptime, and downtime history</strong> — Track latency and previous outages over time.</li>
+      </ul>
+
+      <h3>Built for Infrastructure</h3>
+      <p>Pingwatch is intentionally focused. It is not intended to replace full-stack observability platforms, APM systems, or network-management suites.</p>
+      <p>Its purpose is simple:</p>
+      <blockquote>Know whether your infrastructure is reachable, and understand how it has been behaving over time.</blockquote>
+      <p>Whether you are monitoring a home NAS, a storage appliance, a virtualization host, a Linux server, or critical infrastructure endpoints, Pingwatch provides a straightforward way to keep an eye on availability.</p>
+
+      <h3>Built by Superstack</h3>
+      <p>Pingwatch is developed and maintained by <strong>Superstack</strong>, a product studio focused on practical tools for IT infrastructure, storage, observability, automation, and cloud operations.</p>
+      <dl class="about-meta">
+        <div><dt>Developer</dt><dd>Superstack</dd></div>
+        <div><dt>Website</dt><dd><a href="https://superstack.in" target="_blank" rel="noopener noreferrer">superstack.in</a></dd></div>
+        <div><dt>Demo</dt><dd><a href="https://demo-pingwatch.superstack.in" target="_blank" rel="noopener noreferrer">demo-pingwatch.superstack.in</a></dd></div>
+      </dl>
+      <p class="about-tagline">Pingwatch — Simple monitoring for the infrastructure that matters.</p>
+      <p class="muted"><span data-i18n="nav.version">Version</span> <span id="about-version">1.2.0</span></p>
+    </div>
+  </div>
+</div>
+<div class="modal" id="changelog-modal" hidden>
+  <div class="dialog about-dialog changelog-dialog" role="dialog" aria-labelledby="changelog-title">
+    <header>
+      <h2 id="changelog-title" data-i18n="changelog.title">Changelog</h2>
+      <button type="button" class="ghost" id="changelog-close" data-i18n="about.close">Close</button>
+    </header>
+    <div class="about-body" id="changelog-body"></div>
+  </div>
+</div>

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Finder · Pingwatch{% endblock %}
+{% block content %}
+<nav class="admin-tabs finder-tabs" aria-label="Finder catalogs">
+  <button type="button" class="ghost active" data-kind="shares" data-i18n="finder.shares">NAS Shares</button>
+  <button type="button" class="ghost" data-kind="volumes" data-i18n="finder.volumes">Storage Volumes</button>
+</nav>
+
+<section class="toolbar finder-toolbar">
+  <input id="finder-q" type="search" placeholder="Search name, path, WWN, or storage…" data-i18n-placeholder="finder.search_shares" />
+  <p class="hint" id="finder-hint" data-i18n="finder.loading">Loading catalog…</p>
+  <p class="form-error" id="finder-error" hidden></p>
+  <a class="ghost" id="finder-template" href="/api/finder/shares/template.csv" data-i18n="finder.template">Download template</a>
+  <label class="primary file-btn admin-only" id="finder-upload" hidden>
+    <span data-i18n="finder.upload">Upload CSV</span>
+    <input id="finder-file" type="file" accept=".csv,text/csv" />
+  </label>
+</section>
+
+<section class="table-wrap" data-table="shares">
+  <table class="entity-table finder-table">
+    <thead>
+      <tr>
+        <th class="col-seq" data-i18n="dash.seq">Seq No.</th>
+        <th data-i18n="dash.name">Name</th>
+        <th>Path</th>
+        <th>Description</th>
+        <th>Storage</th>
+      </tr>
+    </thead>
+    <tbody id="share-rows"></tbody>
+  </table>
+</section>
+
+<section class="table-wrap" data-table="volumes" hidden>
+  <table class="entity-table finder-table">
+    <thead>
+      <tr>
+        <th class="col-seq" data-i18n="dash.seq">Seq No.</th>
+        <th data-i18n="dash.name">Name</th>
+        <th>WWN</th>
+        <th>Size</th>
+        <th>Storage</th>
+      </tr>
+    </thead>
+    <tbody id="volume-rows"></tbody>
+  </table>
+</section>
+<div id="finder-empty" class="state" hidden></div>
+<nav class="pager" id="finder-pager" hidden>
+  <button type="button" class="ghost" data-pager="prev" data-i18n="common.previous">Previous</button>
+  <span data-pager="label">Page 1</span>
+  <button type="button" class="ghost" data-pager="next" data-i18n="common.next">Next</button>
+</nav>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/finder.js?v=5"></script>
+{% endblock %}
