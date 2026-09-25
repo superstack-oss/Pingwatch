@@ -10,3 +10,4 @@ __pycache__/
 data/
 website/node_modules/
 website/dist/
+website
