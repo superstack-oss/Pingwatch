@@ -1,7 +1,25 @@
 {% extends "base.html" %}
 {% block title %}{% if archive %}Archives{% else %}Incidents{% endif %} · Pingwatch{% endblock %}
 {% block page_class %}{% if archive %}archive-page{% endif %}{% endblock %}
+{% block heading %}
+{% if device_id %}
+<h1 data-i18n="nav.incidents">Incidents</h1>
+<p class="lede">{{ device_name }} · CI {{ device_ci }}</p>
+{% else %}
+{{ super() }}
+{% endif %}
+{% endblock %}
 {% block content %}
+{% if device_id %}
+<nav class="crumb" aria-label="Breadcrumb">
+  <a href="/" data-i18n="page.dashboard">Uptime</a>
+  <span aria-hidden="true">›</span>
+  <a href="/devices/{{ device_id }}" data-i18n="dash.details">Details</a>
+  <span aria-hidden="true">›</span>
+  <span data-i18n="nav.incidents">Incidents</span>
+</nav>
+{% endif %}
+<div id="incident-scope" data-device-id="{{ device_id or '' }}" data-device-name="{{ device_name or '' }}" hidden></div>
 <section class="toolbar">
   <select id="incident-status" data-i18n-options>
     {% if archive %}
@@ -20,14 +38,14 @@
     {% endif %}
   </select>
   <p class="hint" id="incident-hint"></p>
-  <div class="bulk-bar" id="incident-bulk" hidden></div>
+  <div class="bulk-bar admin-only" id="incident-bulk" hidden></div>
   <p class="form-error" id="incident-error" hidden></p>
 </section>
 <section class="table-wrap">
   <table class="entity-table incidents-table">
     <thead>
       <tr>
-        <th class="col-check"><input type="checkbox" class="select-all" aria-label="Select all" data-i18n-aria="common.select_all" /></th>
+        <th class="col-check admin-only" hidden><input type="checkbox" class="select-all" aria-label="Select all" data-i18n-aria="common.select_all" /></th>
         <th data-i18n="incidents.incident">Incident</th>
         <th data-i18n="incidents.priority">Priority</th>
         <th data-i18n="incidents.short_description">Short Description</th>
@@ -48,5 +66,5 @@
 <div class="row-dropdown" id="incident-menu" hidden role="menu"></div>
 {% endblock %}
 {% block scripts %}
-<script src="/static/js/incidents.js?v=18"></script>
+<script src="/static/js/incidents.js?v=20"></script>
 {% endblock %}

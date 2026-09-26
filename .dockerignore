@@ -1,4 +1,5 @@
 .git
+.github
 .venv
 venv
 __pycache__
@@ -8,3 +9,8 @@ __pycache__
 tests
 Makefile
 README.md
+install.sh
+docker
+podman
+podman-compose.yml
+docker-compose.image.yml

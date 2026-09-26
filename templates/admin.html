@@ -3,7 +3,7 @@
 {% block page_class %}admin-page{% endblock %}
 {% block page_tools %}
 <button type="button" class="icon-btn" id="admin-add" title="Add device" aria-label="Add device" data-i18n-title="common.add_device" data-i18n-aria="common.add_device">
-  <img src="/static/public/add-square-svgrepo.svg" alt="" />
+  <img src="/static/public/add-square-svgrepo-2.svg?v=3" alt="" />
 </button>
 {% endblock %}
 {% block content %}
@@ -208,7 +208,7 @@
           <span data-i18n="admin.notifications">Notifications</span>
           <span class="admin-chip" data-i18n="admin.chip">Admin</span>
         </h3>
-        <p data-i18n="admin.notifications_body">Configure when and how Pingwatch sends alert notifications.</p>
+        <p data-i18n="admin.notifications_body">Choose when Pingwatch alerts, then enable the channels that should receive them.</p>
       </div>
       <div class="setting-controls">
         <label><span data-i18n="admin.alert_email">Alert recipient email</span>
@@ -216,8 +216,8 @@
         </label>
         <label class="toggle">
           <span>
-            <strong data-i18n="admin.email_alerts">Email alerts</strong>
-            <small data-i18n="admin.email_alerts_help">Send email when a monitor status changes</small>
+            <strong data-i18n="admin.email_alerts">Status alerts</strong>
+            <small data-i18n="admin.email_alerts_help">Notify email and enabled channels when a monitor status changes</small>
           </span>
           <input type="checkbox" name="notify_on_down" />
         </label>
@@ -235,6 +235,204 @@
           </span>
           <input type="checkbox" name="notify_on_access_request" />
         </label>
+      </div>
+    </article>
+
+    <article class="setting-card">
+      <div class="setting-copy">
+        <h3>
+          <span class="setting-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16"/><path d="M4 12h10"/><path d="M4 16h16"/><circle cx="18.5" cy="12" r="2.2"/></svg>
+          </span>
+          <span data-i18n="admin.channels">Alert channels</span>
+          <span class="admin-chip" data-i18n="admin.chip">Admin</span>
+        </h3>
+        <p data-i18n="admin.channels_body">Pick a channel, paste its credentials, and enable it. Save settings before sending a test. Open the info icon for setup steps.</p>
+      </div>
+      <div class="setting-controls channel-list">
+        <div class="channel-picker">
+          <div class="channel-select" id="channel-select">
+            <span class="channel-select-caption" data-i18n="admin.channel_select">Channel</span>
+            <input type="hidden" id="notify-channel" value="teams" />
+            <button type="button" class="channel-select-btn" id="channel-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="channel-menu" data-i18n-aria="admin.channel_select">
+              <img id="channel-select-icon" class="channel-ico" src="/static/public/teams-svgrepo-com.svg" alt="" />
+              <span id="channel-select-label">Microsoft Teams</span>
+              <svg class="channel-select-caret" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M5.5 7.2 8 10l2.5-2.8"/></svg>
+            </button>
+            <ul class="channel-menu" id="channel-menu" hidden role="listbox">
+              <li role="option" data-channel="teams" class="is-selected">
+                <img class="channel-ico" src="/static/public/teams-svgrepo-com.svg" alt="" />
+                <span data-channel-label>Microsoft Teams</span>
+                <em class="channel-on" hidden>On</em>
+              </li>
+              <li role="option" data-channel="slack">
+                <img class="channel-ico" src="/static/public/slack-svgrepo-com.svg" alt="" />
+                <span data-channel-label>Slack</span>
+                <em class="channel-on" hidden>On</em>
+              </li>
+              <li role="option" data-channel="webhook">
+                <img class="channel-ico" src="/static/public/webhook-svgrepo-com.svg" alt="" />
+                <span data-channel-label>Webhook</span>
+                <em class="channel-on" hidden>On</em>
+              </li>
+              <li role="option" data-channel="pagerduty">
+                <img class="channel-ico" src="/static/public/pager-duty-svgrepo-com.svg" alt="" />
+                <span data-channel-label>PagerDuty</span>
+                <em class="channel-on" hidden>On</em>
+              </li>
+              <li role="option" data-channel="discord">
+                <img class="channel-ico" src="/static/public/discord-communication-interaction-message-network-svgrepo-com.svg" alt="" />
+                <span data-channel-label>Discord</span>
+                <em class="channel-on" hidden>On</em>
+              </li>
+              <li role="option" data-channel="telegram">
+                <img class="channel-ico" src="/static/public/telegram-svgrepo-com.svg" alt="" />
+                <span data-channel-label>Telegram</span>
+                <em class="channel-on" hidden>On</em>
+              </li>
+              <li role="option" data-channel="whatsapp">
+                <img class="channel-ico" src="/static/public/whatsapp-svgrepo-com.svg" alt="" />
+                <span data-channel-label>WhatsApp</span>
+                <em class="channel-on" hidden>On</em>
+              </li>
+            </ul>
+          </div>
+          <button type="button" class="icon-btn" id="channel-guide-btn" title="How to configure this channel" aria-label="How to configure this channel" data-i18n-title="admin.channel_guide" data-i18n-aria="admin.channel_guide">
+            <img src="/static/public/info-circle-svgrepo.svg" alt="" />
+          </button>
+        </div>
+
+        <div class="channel-block" data-channel="teams">
+          <label class="toggle">
+            <span>
+              <strong data-i18n="admin.channel_teams">Microsoft Teams</strong>
+              <small data-i18n="admin.channel_teams_help">Incoming webhook in a Teams channel</small>
+            </span>
+            <input type="checkbox" name="notify_teams_enabled" />
+          </label>
+          <label><span data-i18n="admin.channel_webhook_url">Webhook URL</span>
+            <input name="notify_teams_webhook" type="password" autocomplete="off" placeholder="https://outlook.office.com/webhook/…" />
+          </label>
+          <div class="setting-actions">
+            <button class="ghost" type="button" data-notify-test="teams" data-i18n="admin.channel_test">Send test</button>
+            <p class="muted" data-notify-result="teams"></p>
+          </div>
+        </div>
+        <div class="channel-block" data-channel="slack" hidden>
+          <label class="toggle">
+            <span>
+              <strong data-i18n="admin.channel_slack">Slack</strong>
+              <small data-i18n="admin.channel_slack_help">Incoming webhook in a Slack workspace</small>
+            </span>
+            <input type="checkbox" name="notify_slack_enabled" />
+          </label>
+          <label><span data-i18n="admin.channel_webhook_url">Webhook URL</span>
+            <input name="notify_slack_webhook" type="password" autocomplete="off" placeholder="https://hooks.slack.com/services/…" />
+          </label>
+          <div class="setting-actions">
+            <button class="ghost" type="button" data-notify-test="slack" data-i18n="admin.channel_test">Send test</button>
+            <p class="muted" data-notify-result="slack"></p>
+          </div>
+        </div>
+        <div class="channel-block" data-channel="webhook" hidden>
+          <label class="toggle">
+            <span>
+              <strong data-i18n="admin.channel_webhook">Webhook</strong>
+              <small data-i18n="admin.channel_webhook_help">POST JSON to your own endpoint</small>
+            </span>
+            <input type="checkbox" name="notify_webhook_enabled" />
+          </label>
+          <label><span data-i18n="admin.channel_webhook_url">Webhook URL</span>
+            <input name="notify_webhook_url" type="password" autocomplete="off" placeholder="https://example.com/hooks/pingwatch" />
+          </label>
+          <label><span data-i18n="admin.channel_webhook_secret">Shared secret (optional)</span>
+            <input name="notify_webhook_secret" type="password" autocomplete="new-password" />
+          </label>
+          <p class="field-hint" data-i18n="admin.channel_webhook_secret_help">If set, Pingwatch signs the body with HMAC-SHA256 in X-Pingwatch-Signature.</p>
+          <div class="setting-actions">
+            <button class="ghost" type="button" data-notify-test="webhook" data-i18n="admin.channel_test">Send test</button>
+            <p class="muted" data-notify-result="webhook"></p>
+          </div>
+        </div>
+        <div class="channel-block" data-channel="pagerduty" hidden>
+          <label class="toggle">
+            <span>
+              <strong data-i18n="admin.channel_pagerduty">PagerDuty</strong>
+              <small data-i18n="admin.channel_pagerduty_help">Events API v2 routing key. Down triggers; recovery resolves.</small>
+            </span>
+            <input type="checkbox" name="notify_pagerduty_enabled" />
+          </label>
+          <label><span data-i18n="admin.channel_pagerduty_key">Routing key</span>
+            <input name="notify_pagerduty_routing_key" type="password" autocomplete="off" />
+          </label>
+          <div class="setting-actions">
+            <button class="ghost" type="button" data-notify-test="pagerduty" data-i18n="admin.channel_test">Send test</button>
+            <p class="muted" data-notify-result="pagerduty"></p>
+          </div>
+        </div>
+        <div class="channel-block" data-channel="discord" hidden>
+          <label class="toggle">
+            <span>
+              <strong data-i18n="admin.channel_discord">Discord</strong>
+              <small data-i18n="admin.channel_discord_help">Channel incoming webhook</small>
+            </span>
+            <input type="checkbox" name="notify_discord_enabled" />
+          </label>
+          <label><span data-i18n="admin.channel_webhook_url">Webhook URL</span>
+            <input name="notify_discord_webhook" type="password" autocomplete="off" placeholder="https://discord.com/api/webhooks/…" />
+          </label>
+          <div class="setting-actions">
+            <button class="ghost" type="button" data-notify-test="discord" data-i18n="admin.channel_test">Send test</button>
+            <p class="muted" data-notify-result="discord"></p>
+          </div>
+        </div>
+        <div class="channel-block" data-channel="telegram" hidden>
+          <label class="toggle">
+            <span>
+              <strong data-i18n="admin.channel_telegram">Telegram</strong>
+              <small data-i18n="admin.channel_telegram_help">Bot token and the chat that should receive alerts</small>
+            </span>
+            <input type="checkbox" name="notify_telegram_enabled" />
+          </label>
+          <label><span data-i18n="admin.channel_telegram_token">Bot token</span>
+            <input name="notify_telegram_bot_token" type="password" autocomplete="off" />
+          </label>
+          <label><span data-i18n="admin.channel_telegram_chat">Chat ID</span>
+            <input name="notify_telegram_chat_id" autocomplete="off" placeholder="-1001234567890" />
+          </label>
+          <div class="setting-actions">
+            <button class="ghost" type="button" data-notify-test="telegram" data-i18n="admin.channel_test">Send test</button>
+            <p class="muted" data-notify-result="telegram"></p>
+          </div>
+        </div>
+        <div class="channel-block" data-channel="whatsapp" hidden>
+          <label class="toggle">
+            <span>
+              <strong data-i18n="admin.channel_whatsapp">WhatsApp</strong>
+              <small data-i18n="admin.channel_whatsapp_help">WhatsApp Cloud API from Meta</small>
+            </span>
+            <input type="checkbox" name="notify_whatsapp_enabled" />
+          </label>
+          <label><span data-i18n="admin.channel_whatsapp_token">Access token</span>
+            <input name="notify_whatsapp_token" type="password" autocomplete="off" />
+          </label>
+          <label><span data-i18n="admin.channel_whatsapp_phone">Phone number ID</span>
+            <input name="notify_whatsapp_phone_id" autocomplete="off" />
+          </label>
+          <label><span data-i18n="admin.channel_whatsapp_to">Recipient number</span>
+            <input name="notify_whatsapp_to" autocomplete="off" placeholder="15551234567" />
+          </label>
+          <label><span data-i18n="admin.channel_whatsapp_template">Template name (optional)</span>
+            <input name="notify_whatsapp_template" autocomplete="off" placeholder="pingwatch_alert" />
+          </label>
+          <label><span data-i18n="admin.channel_whatsapp_lang">Template language</span>
+            <input name="notify_whatsapp_template_lang" autocomplete="off" placeholder="en_US" />
+          </label>
+          <div class="setting-actions">
+            <button class="ghost" type="button" data-notify-test="whatsapp" data-i18n="admin.channel_test">Send test</button>
+            <p class="muted" data-notify-result="whatsapp"></p>
+          </div>
+        </div>
       </div>
     </article>
 
@@ -431,7 +629,16 @@
     <button class="primary wide" type="submit" data-i18n="common.save">Save</button>
   </form>
 </div>
+<div class="modal" id="channel-guide-modal" hidden>
+  <div class="dialog channel-guide-dialog" role="dialog" aria-modal="true" aria-labelledby="channel-guide-title">
+    <header>
+      <h2 id="channel-guide-title"></h2>
+      <button type="button" class="ghost" id="channel-guide-close" data-i18n="common.close">Close</button>
+    </header>
+    <div id="channel-guide-body" class="channel-guide-body"></div>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
-<script src="/static/js/admin.js?v=17"></script>
+<script src="/static/js/admin.js?v=21"></script>
 {% endblock %}

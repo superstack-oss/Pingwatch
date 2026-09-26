@@ -14,6 +14,8 @@
   <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/MySQL-8.x-4479A1?logo=mysql&logoColor=white" alt="MySQL">
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose">
+  <img src="https://img.shields.io/badge/Podman-Compose-892CA0?logo=podman&logoColor=white" alt="Podman">
+  <a href="https://hub.docker.com/r/superstackinc/pingwatch"><img src="https://img.shields.io/badge/Docker%20Hub-superstackinc%2Fpingwatch-2496ED?logo=docker&logoColor=white" alt="Docker Hub"></a>
 </p>
 
 <p align="center">
@@ -33,10 +35,12 @@ Pingwatch is a FastAPI dashboard with a MySQL check history. You add a configura
 ## Features
 
 - **Six monitor types** on one fleet table: Ping, TCP Port, DNS, WebSocket, gRPC health, and 100+ native game-server queries
+- **Certificate and domain expiry** on HTTPS and hostname monitors, read from the live certificate and registration record
 - **Uptime dashboard** with CI, status, response time, sparklines, filters, and 25 rows per page
 - **Warning** when latency crosses the configured threshold (200 ms by default)
 - **Device detail** with availability, last down, outages, and check history (24h / 7d / 30d)
 - **Incidents** with work notes when repeated failures need a timeline
+- **Alert channels** for Microsoft Teams, Slack, Discord, Telegram, WhatsApp, PagerDuty, generic webhooks, and email
 - **Analytics**, **Finder** (NAS shares / storage volumes), **Archives**, and **Notifications**
 - **Admin console** for devices, users, access requests, audit logs, and settings
 - **CSV bulk import** and a downloadable template
@@ -54,13 +58,44 @@ Pingwatch is a FastAPI dashboard with a MySQL check history. You add a configura
 | **gRPC** | Standard gRPC health protocol; anything but `SERVING` is down (default port 50051) |
 | **Game server** | Native query for 100+ game types (A2S, Minecraft, Bedrock, GameSpy, Quake 3, FiveM, and related) |
 
+## Certificate and domain expiry
+
+HTTPS-style monitors (TCP 443/8443, `wss://`, and hostname Ping/DNS checks) read the **certificate the server presents** and show its expiry on the monitor detail page. There is no separate SSL product and no extra hostname list.
+
+Because the date comes from the live handshake, a renewal that ran while the web server never reloaded still shows the old date.
+
+Hostname monitors also look up **domain registration expiry** (RDAP) so the certificate date and the registration date live on the same page.
+
 ## Quick start
+
+One-line install (checks the host, installs missing tools, clones this repo, starts Compose):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/superstack-oss/Pingwatch/main/install.sh | bash -s -- --yes
+```
+
+Or clone and start yourself:
 
 ```bash
 git clone https://github.com/superstack-oss/Pingwatch.git
 cd Pingwatch
 cp .env.example .env
 docker compose up --build
+```
+
+Pull the published image from Docker Hub (no local image build):
+
+```bash
+cp .env.example .env
+# set SECRET_KEY and database passwords
+docker compose --env-file .env -f docker-compose.image.yml up -d
+```
+
+Podman:
+
+```bash
+cp .env.example .env
+podman compose --env-file .env -f podman-compose.yml up --build -d
 ```
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000) and sign in.
@@ -80,10 +115,51 @@ Change `SECRET_KEY` and database passwords in `.env` before any shared or produc
 
 ## Requirements
 
-- Python 3.9+ on the host (3.12 in the Docker image)
+- Python 3.9+ on the host (3.12 in the container image)
 - MySQL 8.x
-- Docker and Docker Compose (recommended)
-- `ping` on the host for Ping / ICMP monitors
+- Docker and Docker Compose, **or** Podman and Podman Compose (recommended)
+- `ping` on the host for Ping / ICMP monitors when you run uvicorn outside a container
+
+## Container images
+
+The web image is published to [Docker Hub](https://hub.docker.com/r/superstackinc/pingwatch) as `superstackinc/pingwatch` and to GHCR as `ghcr.io/superstack-oss/pingwatch`. Tags follow `VERSION` (`1.2.0`, `latest` on `main`, and `sha-…`).
+
+GitHub Actions workflow `.github/workflows/publish-image.yml` builds `linux/amd64` and `linux/arm64`. Add repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` so Hub is updated; GHCR publishes with `GITHUB_TOKEN`. Paste `docker/DOCKERHUB.md` into the Hub repository overview.
+
+`install.sh` pulls `superstackinc/pingwatch:<version>` when that tag exists, and otherwise builds from the Dockerfile.
+
+## Installer
+
+`install.sh` is safe to pipe from GitHub. It:
+
+1. Checks OS, architecture, memory, disk, and ports `8000` / `3307`
+2. Validates git, curl, and Docker or Podman Compose
+3. Installs missing packages (`apt` / `dnf` / `yum` / `pacman` / `zypper`; macOS expects Docker Desktop or Homebrew Podman)
+4. Clones `https://github.com/superstack-oss/Pingwatch.git` (or uses the current checkout)
+5. Writes `.env` if needed and starts the stack
+
+```bash
+./install.sh --help
+./install.sh --local --engine docker
+./install.sh --dir ~/pingwatch --engine podman --build
+```
+
+## Alert channels
+
+When a monitor goes down — and, if you allow it, when it recovers — Pingwatch can notify operators on:
+
+| Channel | Connection |
+| --- | --- |
+| **Microsoft Teams** | Incoming webhook URL |
+| **Slack** | Incoming webhook URL |
+| **Webhook** | JSON POST to your endpoint (optional HMAC-SHA256 signature) |
+| **PagerDuty** | Events API v2 routing key (trigger on down, resolve on recovery) |
+| **Discord** | Incoming webhook URL |
+| **Telegram** | Bot token and chat ID |
+| **WhatsApp** | Cloud API token, phone number ID, recipient; optional Utility template |
+| **Email** | SMTP, configured separately |
+
+Turn on **Status alerts** in **Admin → Settings**, choose a channel from the dropdown, enable it, save, then **Send test**. The info icon next to the dropdown shows setup steps for that channel. Access-request notices still use email only.
 
 ## Sign in and access
 
@@ -119,6 +195,7 @@ There is no frontend compile step. Jinja templates and `static/` are served dire
 | `make start` | Uvicorn on `0.0.0.0:8000` |
 | `make test` | `pytest` |
 | `make docker` | `docker compose up --build` |
+| `make podman` | `podman compose -f podman-compose.yml up --build` |
 
 Point `.env` at MySQL. Host `.env.example` publishes MySQL on **3307** so it does not collide with a local MySQL on 3306. Inside Compose the app uses host `mysql` and port `3306`.
 
@@ -134,6 +211,9 @@ Point `.env` at MySQL. Host `.env.example` publishes MySQL on **3307** so it doe
 | `MYSQL_ROOT_PASSWORD` | `pingwatch` | Compose MySQL root password |
 | `MYSQL_PUBLISH_PORT` | `3307` | Host port mapped to MySQL |
 | `APP_PORT` | `8000` | Host port mapped to the app |
+| `APP_BIND` | `0.0.0.0` | Address Compose binds on the host |
+| `PINGWATCH_IMAGE` | (build locally) | Published web image, e.g. `superstackinc/pingwatch:1.2.0` |
+| `PINGWATCH_VERSION` | `1.2.0` | Image / app version label |
 | `PING_INTERVAL` | `30` | Seconds between fleet sweeps |
 | `PING_TIMEOUT` | `2.0` | ICMP timeout in seconds |
 | `PING_CONCURRENCY` | `40` | Max parallel probes |
@@ -168,3 +248,4 @@ tests/          pytest
 ## Built by Superstack
 
 Pingwatch is developed by [Superstack](https://superstack.in). Try the public demo at [demo-pingwatch.superstack.in](https://demo-pingwatch.superstack.in).
+

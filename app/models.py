@@ -25,6 +25,7 @@ class Device(Base):
     rtt_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     last_checked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     last_change_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    ssl_info: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
     results: Mapped[List["PingResult"]] = relationship(
@@ -32,6 +33,17 @@ class Device(Base):
         cascade="all, delete-orphan",
         order_by="PingResult.checked_at",
     )
+
+
+class SslHost(Base):
+    __tablename__ = "ssl_hosts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    host: Mapped[str] = mapped_column(String(253), nullable=False, unique=True, index=True)
+    ssl_info: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    last_checked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
 
 class PingResult(Base):

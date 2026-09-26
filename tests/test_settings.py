@@ -33,3 +33,11 @@ def test_company_name_is_trimmed_to_15_characters():
     assert clean_company_name("ABCDEFGHIJKLMNOPQR") == "ABCDEFGHIJKLMNO"
     pub = public_settings({"company_name": "  Superstack  ", "ping_interval": "30"})
     assert pub["company_name"] == "Superstack"
+
+
+def test_version_file_matches_public_settings():
+    from pathlib import Path
+
+    version = Path("VERSION").read_text(encoding="utf-8").strip()
+    assert version
+    assert public_settings({})["version"] == version

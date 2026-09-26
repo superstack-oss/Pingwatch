@@ -20,6 +20,8 @@ def _add_missing_columns(sync_conn) -> None:
             sync_conn.execute(text("ALTER TABLE devices ADD COLUMN monitor_spec TEXT NULL"))
         if "monitor_key" not in columns:
             sync_conn.execute(text("ALTER TABLE devices ADD COLUMN monitor_key VARCHAR(190) NULL"))
+        if "ssl_info" not in columns:
+            sync_conn.execute(text("ALTER TABLE devices ADD COLUMN ssl_info TEXT NULL"))
         sync_conn.execute(
             text("UPDATE devices SET monitor_type = 'ping' WHERE monitor_type IS NULL OR monitor_type = ''")
         )

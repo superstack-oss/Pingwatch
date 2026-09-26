@@ -1,3 +1,4 @@
+from app.dnscheck import ipv4_addresses
 from app.game_types import GAMES, game_info, normalize_game_id
 from app.monitors import (
     build_monitor_key,
@@ -6,6 +7,11 @@ from app.monitors import (
     normalize_monitor,
     target_display,
 )
+
+
+def test_ipv4_addresses_skips_v6():
+    assert ipv4_addresses(["167.239.226.37", "2001:db8::1"]) == ["167.239.226.37"]
+    assert ipv4_addresses([]) == []
 
 
 def test_game_catalog_covers_more_than_100_types():
@@ -22,6 +28,7 @@ def test_ping_is_the_default_monitor():
     assert target.port is None
     assert target.key == build_monitor_key("ping", "192.168.1.10", None, {})
     assert monitor_label("ping") == "Ping"
+    assert target_display("ping", "aep.com", None, {"resolved_ip": "167.239.226.37"}) == "aep.com (167.239.226.37)"
 
 
 def test_tcp_requires_port_and_is_unique_per_port():

@@ -389,7 +389,7 @@ async def upload_volumes(
     return {"kind": "volumes", "imported": len(rows), "warnings": warnings[:12], "total": len(rows)}
 
 
-def _incident_out(incident: Incident, device: Device) -> dict:
+def _incident_out(incident: Incident, device: Device, user: Optional[User] = None) -> dict:
     number = incident.number or format_incident_number(incident.id)
     description = incident.description or incident.last_error or "Device is down."
     short = incident.short_description or short_incident_description(
@@ -426,7 +426,7 @@ def _incident_out(incident: Incident, device: Device) -> dict:
         "duration_seconds": duration,
         "servicenow_sys_id": snow,
         "actions": {
-            "delete": True,
+            "delete": bool(user and getattr(user, "role", None) == "admin"),
         },
     }
 
@@ -575,14 +575,20 @@ async def _incident_attachments(db: AsyncSession, incident_id: int) -> list:
 async def list_incidents(
     status: Optional[str] = None,
     scope: Optional[str] = None,
+    device_id: Optional[int] = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=TABLE_PAGE_SIZE, ge=1, le=100),
-    _: object = Depends(require_user),
+    user=Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ):
     archive = scope == "archive"
     allowed = ARCHIVE_INCIDENT_STATUSES if archive else LIVE_INCIDENT_STATUSES
     query = select(Incident, Device).join(Device, Device.id == Incident.device_id)
+    if device_id is not None:
+        device = await db.get(Device, device_id)
+        if device is None:
+            raise HTTPException(status_code=404, detail="Device not found")
+        query = query.where(Incident.device_id == device_id)
     if status in allowed:
         query = query.where(Incident.status == status)
     else:
@@ -590,23 +596,21 @@ async def list_incidents(
     total = int((await db.execute(select(func.count()).select_from(query.subquery()))).scalar_one())
     page, page_size, pages, offset = page_bounds(page, page_size, total)
     rows = (await db.execute(query.order_by(Incident.started_at.desc()).offset(offset).limit(page_size))).all()
-    payload = [_incident_out(incident, device) for incident, device in rows]
-    open_count = int(
-        (
-            await db.execute(select(func.count(Incident.id)).where(Incident.status.in_(LIVE_INCIDENT_STATUSES)))
-        ).scalar_one()
-    )
-    archived_count = int(
-        (
-            await db.execute(select(func.count(Incident.id)).where(Incident.status.in_(ARCHIVE_INCIDENT_STATUSES)))
-        ).scalar_one()
-    )
+    payload = [_incident_out(incident, device, user) for incident, device in rows]
+    open_query = select(func.count(Incident.id)).where(Incident.status.in_(LIVE_INCIDENT_STATUSES))
+    archived_query = select(func.count(Incident.id)).where(Incident.status.in_(ARCHIVE_INCIDENT_STATUSES))
+    if device_id is not None:
+        open_query = open_query.where(Incident.device_id == device_id)
+        archived_query = archived_query.where(Incident.device_id == device_id)
+    open_count = int((await db.execute(open_query)).scalar_one())
+    archived_count = int((await db.execute(archived_query)).scalar_one())
     return {
         "incidents": payload,
         "open": open_count,
         "archived": archived_count,
         "total": total,
         "scope": "archive" if archive else "live",
+        "device_id": device_id,
         "page": page,
         "pages": pages,
         "page_size": page_size,
@@ -616,7 +620,7 @@ async def list_incidents(
 @router.get("/api/incidents/{incident_id}")
 async def get_incident(
     incident_id: int,
-    _: object = Depends(require_user),
+    user=Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ):
     incident = await db.get(Incident, incident_id)
@@ -625,7 +629,7 @@ async def get_incident(
     device = await db.get(Device, incident.device_id)
     if device is None:
         raise HTTPException(status_code=404, detail="Device not found")
-    payload = _incident_out(incident, device)
+    payload = _incident_out(incident, device, user)
     payload["activities"] = await _incident_activities(db, incident)
     payload["attachments"] = await _incident_attachments(db, incident.id)
     return {"incident": payload}
@@ -783,6 +787,8 @@ async def update_incident(
     number = incident.number or format_incident_number(incident.id)
     next_status = None
     if payload.action == "delete":
+        if getattr(user, "role", None) != "admin":
+            raise HTTPException(status_code=403, detail="Only an admin can delete incidents")
         incident.active_ci_key = None
         await db.delete(incident)
         await write_audit(db, "incident_delete", number, user, request)
@@ -817,7 +823,7 @@ async def update_incident(
     device = await db.get(Device, incident.device_id)
     if device is None:
         raise HTTPException(status_code=404, detail="Device not found")
-    detail = _incident_out(incident, device)
+    detail = _incident_out(incident, device, user)
     detail["activities"] = await _incident_activities(db, incident)
     detail["attachments"] = await _incident_attachments(db, incident.id)
     return {"incident": detail}

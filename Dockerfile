@@ -18,11 +18,21 @@ RUN python -m venv /venv \
 
 FROM python:3.12-slim-bookworm
 
+ARG PINGWATCH_VERSION=1.2.0
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PATH="/venv/bin:$PATH"
+
+LABEL org.opencontainers.image.title="Pingwatch" \
+      org.opencontainers.image.description="Self-hosted uptime monitoring for NAS, storage, servers, DNS, APIs, and game servers." \
+      org.opencontainers.image.url="https://superstack.in" \
+      org.opencontainers.image.source="https://github.com/superstack-oss/Pingwatch" \
+      org.opencontainers.image.documentation="https://github.com/superstack-oss/Pingwatch#readme" \
+      org.opencontainers.image.vendor="Superstack" \
+      org.opencontainers.image.version="${PINGWATCH_VERSION}"
 
 WORKDIR /app
 

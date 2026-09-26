@@ -20,14 +20,15 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.api_admin import router as admin_router
 from app.api_auth import router as auth_router
 from app.api_extra import router as extra_router
+from app.api_ssl import router as ssl_router
 from app.config import settings
 from app.db import SessionLocal, engine, get_db
 from app.dnscheck import lookup_dns
 from app.finder_csv import DEVICE_TEMPLATE, CsvError, parse_device_csv
 from app.migrate import ensure_schema
-from app.models import Device, Incident, User, format_incident_number, format_item_id
+from app.models import Device, Incident, SslHost, User, format_incident_number, format_item_id
 from app.monitor import monitor
-from app.monitors import apply_monitor_fields, catalog, MONITOR_TYPES
+from app.monitors import apply_monitor_fields, catalog, MONITOR_TYPES, parse_spec
 from app.netcheck import run_diagnostics
 from app.queries import (
     RANGE_DELTA,
@@ -54,10 +55,12 @@ from app.schemas import (
     HistoryRange,
     OutageListOut,
     ServiceModeIn,
+    SslOut,
 )
 from app.security import require_admin, require_user, user_from_session
 from app.seed import seed_admin
 from app.settings_store import seed_settings, write_audit
+from app.sslcheck import refresh_device_ssl, ssl_view_for_device
 from app.stats import availability, downsample, latency_trend, rtt_stats
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -114,6 +117,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(extra_router)
+app.include_router(ssl_router)
 app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")
 
 
@@ -188,6 +192,33 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     )
 
 
+@app.get("/ssl", response_class=HTMLResponse)
+async def ssl_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user, redirect = await _page_gate(request, db)
+    if redirect:
+        return redirect
+    return _page(
+        "ssl.html",
+        request,
+        {
+            "title": "SSL",
+            "nav": "ssl",
+            "lede": "Watch live certificates and domain registration expiry.",
+        },
+    )
+
+
+@app.get("/ssl/{host_id}", response_class=HTMLResponse)
+async def ssl_detail_page(host_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user, redirect = await _page_gate(request, db)
+    if redirect:
+        return redirect
+    row = await db.get(SslHost, host_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="SSL host not found")
+    return _page("ssl_detail.html", request, {"title": row.name, "ssl_id": row.id, "nav": "ssl"})
+
+
 @app.get("/analytics", response_class=HTMLResponse)
 async def analytics_page(request: Request, db: AsyncSession = Depends(get_db)):
     user, redirect = await _page_gate(request, db)
@@ -229,6 +260,32 @@ async def incidents_page(request: Request, db: AsyncSession = Depends(get_db)):
             "nav": "incidents",
             "lede": "Open and in-progress incidents that still need attention.",
             "archive": False,
+            "device_id": None,
+            "device_name": None,
+            "device_ci": None,
+        },
+    )
+
+
+@app.get("/devices/{device_id}/incidents", response_class=HTMLResponse)
+async def device_incidents_page(device_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user, redirect = await _page_gate(request, db)
+    if redirect:
+        return redirect
+    device = await db.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return _page(
+        "incidents.html",
+        request,
+        {
+            "title": "%s · Incidents" % device.name,
+            "nav": "incidents",
+            "lede": "Active incidents for this CI.",
+            "archive": False,
+            "device_id": device.id,
+            "device_name": device.name,
+            "device_ci": device.item_id or format_item_id(device.id),
         },
     )
 
@@ -246,6 +303,9 @@ async def archives_page(request: Request, db: AsyncSession = Depends(get_db)):
             "nav": "archives",
             "lede": "Closed, cancelled, and auto-resolved incidents.",
             "archive": True,
+            "device_id": None,
+            "device_name": None,
+            "device_ci": None,
         },
     )
 
@@ -342,6 +402,21 @@ async def device_page(device_id: int, request: Request, db: AsyncSession = Depen
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     return _page("device.html", request, {"title": device.name, "device_id": device.id, "nav": "dashboard"})
+
+
+@app.get("/devices/{device_id}/investigate", response_class=HTMLResponse)
+async def investigate_page(device_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user, redirect = await _page_gate(request, db)
+    if redirect:
+        return redirect
+    device = await db.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return _page(
+        "investigate.html",
+        request,
+        {"title": "%s · Investigate" % device.name, "device_id": device.id, "nav": "dashboard"},
+    )
 
 
 @app.get("/api/health")
@@ -557,6 +632,19 @@ async def get_device(
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     return await to_detail(db, device)
+
+
+@app.post("/api/devices/{device_id}/ssl", response_model=SslOut)
+async def refresh_device_ssl_endpoint(
+    device_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(require_user)
+) -> SslOut:
+    device = await db.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    await refresh_device_ssl(device, force=True, session=db)
+    await db.commit()
+    await db.refresh(device)
+    return SslOut(**ssl_view_for_device(device))
 
 
 @app.delete("/api/devices/{device_id}", status_code=204, response_class=Response)

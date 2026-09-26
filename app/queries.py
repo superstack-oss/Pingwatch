@@ -12,7 +12,8 @@ from app.config import settings
 from app.insight import build_insight
 from app.models import Device, PingResult
 from app.monitors import monitor_label, parse_spec, target_display
-from app.schemas import DeviceDetailOut, DeviceOut, HistoryPoint, InsightOut, OutageOut
+from app.schemas import DeviceDetailOut, DeviceOut, HistoryPoint, InsightOut, OutageOut, SslOut
+from app.sslcheck import ssl_view_for_device
 from app.stats import availability, compute_outages, display_status, last_event, rtt_stats
 
 RANGE_DELTA = {
@@ -255,6 +256,8 @@ def to_device_out(
         last_up_at=last_up,
         last_error=last_error,
         created_at=device.created_at,
+        resolved_ip=spec.get("resolved_ip"),
+        resolved_ips=list(spec.get("resolved_ips") or ([] if not spec.get("resolved_ip") else [spec.get("resolved_ip")])),
         uptime_24h=round((up_count / total) * 100.0, 2) if total else None,
         avg_rtt_ms=round(period["avg"], 2) if period.get("avg") is not None else None,
         min_rtt_ms=round(period["min"], 2) if period.get("min") is not None else None,
@@ -300,6 +303,7 @@ async def to_detail(db: AsyncSession, device: Device) -> DeviceDetailOut:
     last_outage = outages[0] if outages else None
     fail_7d = sum(1 for row in rows_7d if not row.is_up)
     fail_30d = sum(1 for row in rows_30d if not row.is_up)
+    ssl_payload = ssl_view_for_device(device)
     return DeviceDetailOut(
         **base.model_dump(),
         uptime_7d=availability([as_row(row) for row in rows_7d]),
@@ -308,6 +312,7 @@ async def to_detail(db: AsyncSession, device: Device) -> DeviceDetailOut:
         downtime_duration_seconds=last_outage.duration_seconds if last_outage else None,
         failure_count_7d=fail_7d,
         failure_count_30d=fail_30d,
+        ssl=SslOut(**ssl_payload),
     )
 
 

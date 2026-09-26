@@ -149,7 +149,13 @@ document.querySelector("#finder-file").addEventListener("change", async (event) 
   input.value = "";
   if (!file) return;
   const meta = catalogMeta();
-  if (!confirm(meta.confirm)) return;
+  const ok = await confirmAction({
+    title: meta.confirm,
+    body: t("common.confirm_delete_body"),
+    danger: true,
+    confirmLabel: t("common.continue"),
+  });
+  if (!ok) return;
   showError("");
   const body = new FormData();
   body.append("file", file);

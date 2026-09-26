@@ -126,6 +126,17 @@ function bindTableSelection(table, { bar, renderActions, onAction } = {}) {
   });
   table.addEventListener("click", (event) => {
     if (event.target.closest(".col-check")) event.stopPropagation();
+    const box = event.target.closest("tbody .row-check");
+    if (!box || box.disabled) return;
+    const boxes = [...table.querySelectorAll("tbody .row-check:not(:disabled)")];
+    const index = boxes.indexOf(box);
+    if (event.shiftKey && Number.isInteger(table._lastCheckIndex) && table._lastCheckIndex >= 0) {
+      const start = Math.min(table._lastCheckIndex, index);
+      const end = Math.max(table._lastCheckIndex, index);
+      for (let i = start; i <= end; i += 1) boxes[i].checked = box.checked;
+      syncTableSelection(table, bar, renderActions);
+    }
+    table._lastCheckIndex = index;
   });
   bar?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-bulk]");
@@ -133,6 +144,115 @@ function bindTableSelection(table, { bar, renderActions, onAction } = {}) {
     const ids = selectedRowIds(table);
     if (!ids.length) return;
     onAction(button.dataset.bulk, ids);
+  });
+}
+
+function httpsSiteUrl(host) {
+  if (!host) return "#";
+  if (/^https?:\/\//i.test(host)) return host;
+  return `https://${host}`;
+}
+
+function rowMenuGearHtml(id) {
+  return `<button type="button" class="row-menu-btn" data-id="${escapeHtml(String(id))}" aria-haspopup="menu" aria-expanded="false" title="${escapeHtml(t("dash.actions"))}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  </button>`;
+}
+
+function rowMenuIcon(name) {
+  const stroke = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
+  if (name === "open") {
+    return `<svg ${stroke}><path d="M14 5h7v7"/><path d="M10 14L21 5"/><rect x="3" y="8" width="11" height="11" rx="2"/></svg>`;
+  }
+  if (name === "details") {
+    return `<svg ${stroke}><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r="0.8" fill="currentColor" stroke="none"/></svg>`;
+  }
+  if (name === "refresh") {
+    return `<svg ${stroke}><path d="M21 12a9 9 0 1 1-2.6-6.3"/><path d="M21 3v6h-6"/></svg>`;
+  }
+  if (name === "edit") {
+    return `<svg ${stroke}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>`;
+  }
+  if (name === "download") {
+    return `<svg ${stroke}><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 19h16"/></svg>`;
+  }
+  return `<svg ${stroke}><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 12h10l1-12"/></svg>`;
+}
+
+function positionRowMenu(menu, button) {
+  if (!menu || !button) return;
+  const rect = button.getBoundingClientRect();
+  const width = Math.max(menu.offsetWidth, 210);
+  const left = Math.min(Math.max(8, rect.right - width), window.innerWidth - width - 8);
+  menu.style.left = `${left}px`;
+  menu.style.top = `${rect.bottom + 6}px`;
+}
+
+let confirmWait = null;
+
+function confirmAction(options) {
+  const opts = typeof options === "string" ? { body: options } : options || {};
+  const modal = document.querySelector("#confirm-modal");
+  if (!modal) {
+    return Promise.resolve(window.confirm(opts.body || opts.title || "Are you sure?"));
+  }
+  if (typeof confirmWait === "function") {
+    confirmWait(false);
+    confirmWait = null;
+  }
+  const title = modal.querySelector("#confirm-title");
+  const body = modal.querySelector("#confirm-body");
+  const ok = modal.querySelector("#confirm-ok");
+  const cancel = modal.querySelector("#confirm-cancel");
+  if (title) title.textContent = opts.title || t("common.confirm_title");
+  if (body) {
+    const text = opts.body || "";
+    body.textContent = text;
+    body.hidden = !text;
+  }
+  if (ok) {
+    ok.textContent = opts.confirmLabel || t("dash.delete");
+    ok.classList.toggle("danger", opts.danger !== false);
+  }
+  if (cancel) cancel.textContent = opts.cancelLabel || t("common.cancel");
+  modal.hidden = false;
+  (ok || cancel)?.focus();
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      modal.hidden = true;
+      ok?.removeEventListener("click", onOk);
+      cancel?.removeEventListener("click", onCancel);
+      modal.removeEventListener("click", onOverlay);
+      document.removeEventListener("keydown", onKey);
+      confirmWait = null;
+      resolve(Boolean(value));
+    };
+    const onOk = () => finish(true);
+    const onCancel = () => finish(false);
+    const onOverlay = (event) => {
+      if (event.target === modal) finish(false);
+    };
+    const onKey = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        finish(false);
+      }
+      if (event.key === "Enter" && !event.shiftKey && document.activeElement !== cancel) {
+        event.preventDefault();
+        finish(true);
+      }
+    };
+    confirmWait = finish;
+    ok?.addEventListener("click", onOk);
+    cancel?.addEventListener("click", onCancel);
+    modal.addEventListener("click", onOverlay);
+    document.addEventListener("keydown", onKey);
   });
 }
 
@@ -489,6 +609,179 @@ function emptyState({ title, body, actionLabel, actionId, compact }) {
     <p>${escapeHtml(body || "")}</p>
     ${button}
   </div>`;
+}
+
+function formatSslDate(iso) {
+  const parsed = parseDate(iso);
+  if (!parsed) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(parsed);
+  } catch (err) {
+    return parsed.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+}
+
+function sslDaysLabel(days) {
+  if (days == null) return "—";
+  if (days < 0) return t("ssl.days_ago", { days: Math.abs(days) });
+  if (days === 0) return t("ssl.expires_today");
+  if (days === 1) return t("ssl.day_one");
+  return t("ssl.days_value", { days });
+}
+
+function sslStatusClass(status) {
+  if (status === "Valid") return "online";
+  if (status === "Expiring") return "warning";
+  if (status === "Expired" || status === "Invalid") return "offline";
+  return "";
+}
+
+function sslStatusLabel(status) {
+  if (status === "Valid") return t("ssl.valid");
+  if (status === "Expiring") return t("ssl.expiring");
+  if (status === "Expired") return t("ssl.expired");
+  if (status === "Invalid") return t("ssl.invalid");
+  return t("ssl.checking");
+}
+
+function sslPillHtml(status) {
+  const cls = sslStatusClass(status);
+  const live = status === "Valid" ? "ssl-live" : "";
+  return `<span class="ssl-pill${cls ? ` ${cls}` : ""}"><i class="${live}"></i>${escapeHtml(sslStatusLabel(status))}</span>`;
+}
+
+function sslProviderHtml(item) {
+  const logo = item?.logo || "/static/public/ssl-logo/security-protection-ssl-certificate-svgrepo-com.svg";
+  const label = item?.provider || item?.issuer || t("ssl.cert");
+  return `<span class="ssl-provider"><img src="${escapeHtml(logo)}" alt="" /><span>${escapeHtml(label)}</span></span>`;
+}
+
+function sslSetText(selector, value) {
+  const node = document.querySelector(selector);
+  if (node) node.textContent = value == null || value === "" ? "—" : value;
+}
+
+function sslNeedsLookup(ssl) {
+  if (!ssl) return true;
+  if (!ssl.applicable) return false;
+  if (ssl.has_tls && !ssl.cert) return true;
+  if (ssl.has_domain && !ssl.domain) return true;
+  return false;
+}
+
+function renderSslCards(ssl, hostFallback) {
+  const panel = document.querySelector("#ssl-panel");
+  if (!panel) return;
+  if (!ssl || !ssl.applicable) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  const host = ssl.host || hostFallback || "";
+  const cert = ssl.cert;
+  const domain = ssl.domain;
+  const statusCard = document.querySelector("#ssl-status-card");
+  const certCard = document.querySelector("#ssl-cert-card");
+  const domainCard = document.querySelector("#ssl-domain-card");
+
+  if (statusCard) {
+    statusCard.hidden = !ssl.has_tls;
+    if (ssl.has_tls) {
+      const status = cert && cert.status ? cert.status : cert && cert.error ? "Invalid" : null;
+      const pill = document.querySelector("#ssl-status-pill");
+      if (pill) pill.innerHTML = sslPillHtml(status);
+      const meta = document.querySelector("#ssl-status-meta");
+      if (meta) {
+        if (cert?.error && !cert?.not_after) {
+          meta.hidden = false;
+          meta.textContent = cert.error;
+        } else if (cert?.checked_at) {
+          meta.hidden = false;
+          meta.textContent = t("ssl.checked", { host, date: formatSslDate(cert.checked_at) });
+        } else {
+          meta.hidden = false;
+          meta.textContent = t("ssl.cert_pending");
+        }
+      }
+      sslSetText("#ssl-days", sslDaysLabel(cert?.days_left));
+      sslSetText("#ssl-expires", cert?.not_after ? formatSslDate(cert.not_after) : "—");
+    }
+  }
+
+  if (certCard) {
+    certCard.hidden = !ssl.has_tls;
+    if (ssl.has_tls) {
+      const logo = document.querySelector("#ssl-ca-logo");
+      if (logo) {
+        if (cert?.logo) {
+          logo.src = cert.logo;
+          logo.alt = cert.provider || cert.issuer || "";
+          logo.hidden = false;
+        } else {
+          logo.removeAttribute("src");
+          logo.hidden = true;
+        }
+      }
+      sslSetText("#ssl-cert-subject", cert?.subject || cert?.common_name || host || "—");
+      sslSetText("#ssl-issuer", cert?.provider && cert?.issuer && cert.provider !== cert.issuer ? `${cert.provider} · ${cert.issuer}` : cert?.issuer || cert?.provider || "—");
+      sslSetText("#ssl-valid-from", cert?.not_before ? formatSslDate(cert.not_before) : "—");
+      sslSetText("#ssl-valid-to", cert?.not_after ? formatSslDate(cert.not_after) : "—");
+      const names = (cert?.sans && cert.sans.length ? cert.sans : [cert?.subject || cert?.common_name || host]).filter(Boolean);
+      sslSetText("#ssl-names", names.join(", ") || "—");
+      sslSetText("#ssl-serial", cert?.serial || "—");
+    }
+  }
+
+  if (domainCard) {
+    domainCard.hidden = !ssl.has_domain;
+    if (ssl.has_domain) {
+      const domainError = document.querySelector("#ssl-domain-error");
+      const domainDl = document.querySelector("#ssl-domain-dl");
+      if (domain && domain.expires_at) {
+        const pill = document.querySelector("#ssl-domain-pill");
+        if (pill) {
+          pill.innerHTML = sslPillHtml(domain.status);
+          pill.hidden = false;
+        }
+        sslSetText("#ssl-domain-name", domain.name || host);
+        if (domainError) domainError.hidden = true;
+        if (domainDl) domainDl.hidden = false;
+        sslSetText("#ssl-domain-expires", formatSslDate(domain.expires_at));
+        sslSetText("#ssl-domain-days", sslDaysLabel(domain.days_left));
+        sslSetText("#ssl-domain-registered", domain.registered_at ? formatSslDate(domain.registered_at) : "—");
+        sslSetText("#ssl-domain-registrar", domain.registrar || "—");
+      } else if (domain && domain.error) {
+        const pill = document.querySelector("#ssl-domain-pill");
+        if (pill) {
+          pill.innerHTML = sslPillHtml("Invalid");
+          pill.hidden = false;
+        }
+        sslSetText("#ssl-domain-name", domain.name || host);
+        if (domainError) {
+          domainError.hidden = false;
+          domainError.textContent = domain.error || t("ssl.no_domain");
+        }
+        if (domainDl) domainDl.hidden = true;
+      } else {
+        const pill = document.querySelector("#ssl-domain-pill");
+        if (pill) {
+          pill.innerHTML = sslPillHtml(null);
+          pill.hidden = false;
+        }
+        sslSetText("#ssl-domain-name", host || "—");
+        if (domainError) {
+          domainError.hidden = false;
+          domainError.textContent = t("ssl.domain_pending");
+        }
+        if (domainDl) domainDl.hidden = true;
+      }
+    }
+  }
 }
 
 function incidentsEnabled() {

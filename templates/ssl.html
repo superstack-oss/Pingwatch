@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}SSL · Pingwatch{% endblock %}
+{% block page_tools %}
+<button type="button" class="icon-btn admin-only" id="open-ssl-modal" hidden title="Add hostname" aria-label="Add hostname" data-i18n-title="ssl.add" data-i18n-aria="ssl.add">
+  <img src="/static/public/add-square-svgrepo-2.svg?v=3" alt="" />
+</button>
+{% endblock %}
+{% block content %}
+<section class="stat-grid" aria-label="SSL status">
+  <article class="stat-card">
+    <span data-i18n="ssl.valid">Valid</span>
+    <strong class="up" data-kpi="valid">0</strong>
+  </article>
+  <article class="stat-card">
+    <span data-i18n="ssl.expiring">Expiring</span>
+    <strong class="warn" data-kpi="expiring">0</strong>
+  </article>
+  <article class="stat-card">
+    <span data-i18n="ssl.expired">Expired</span>
+    <strong class="down" data-kpi="expired">0</strong>
+  </article>
+  <article class="stat-card">
+    <span data-i18n="ssl.invalid">Invalid</span>
+    <strong class="unknown" data-kpi="invalid">0</strong>
+  </article>
+</section>
+
+<section class="toolbar">
+  <select id="ssl-status-filter" data-i18n-options>
+    <option value="" data-i18n="dash.all_states">All states</option>
+    <option value="valid" data-i18n="ssl.valid">Valid</option>
+    <option value="expiring" data-i18n="ssl.expiring">Expiring</option>
+    <option value="expired" data-i18n="ssl.expired">Expired</option>
+    <option value="invalid" data-i18n="ssl.invalid">Invalid</option>
+  </select>
+  <p class="hint" id="ssl-hint" data-i18n="ssl.loading">Loading certificates…</p>
+  <div class="bulk-bar admin-only" id="ssl-bulk" hidden></div>
+  <input id="ssl-search" type="search" placeholder="Search hostnames…" data-i18n-placeholder="ssl.search" />
+</section>
+
+<div class="table-card">
+  <section class="table-wrap" aria-live="polite">
+    <table class="entity-table ssl-table">
+      <thead>
+        <tr>
+          <th class="col-check admin-only"><input type="checkbox" class="select-all" aria-label="Select all" data-i18n-aria="common.select_all" /></th>
+          <th data-sort="name" data-i18n="dash.name">Name</th>
+          <th data-sort="issuer" data-i18n="ssl.provider">Provider</th>
+          <th data-sort="status" data-i18n="ssl.status">SSL status</th>
+          <th data-sort="days_left" data-i18n="ssl.days">Days remaining</th>
+          <th data-sort="not_after" data-i18n="ssl.cert_expires">Certificate expires</th>
+          <th data-sort="domain_expires" data-i18n="ssl.domain">Domain expiry</th>
+          <th class="col-actions" data-i18n="dash.actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="ssl-rows"></tbody>
+    </table>
+  </section>
+  <div id="ssl-empty" class="state" hidden></div>
+  <div class="table-footer">
+    <p class="table-count" id="ssl-count">0 items</p>
+    <nav class="pager" id="ssl-pager" hidden>
+      <button type="button" class="ghost" id="ssl-prev" data-i18n="common.previous">Previous</button>
+      <span id="ssl-page-label">Page 1</span>
+      <button type="button" class="ghost" id="ssl-next" data-i18n="common.next">Next</button>
+    </nav>
+  </div>
+</div>
+{% endblock %}
+{% block extras %}
+<div class="modal" id="ssl-modal" hidden>
+  <div class="dialog ssl-dialog" role="dialog" aria-modal="true" aria-labelledby="ssl-modal-title">
+    <header>
+      <h2 id="ssl-modal-title" data-i18n="ssl.add_title">Add an SSL hostname</h2>
+      <button type="button" class="ghost" id="close-ssl-modal" data-i18n="common.close">Close</button>
+    </header>
+    <form id="ssl-form" class="ssl-form">
+      <input type="hidden" name="id" />
+      <p class="lede" data-i18n="ssl.add_lede">Pingwatch reads the live certificate on port 443 and the domain registration record.</p>
+      <label>
+        <span class="field-label"><span data-i18n="dash.display_name">Display name</span> <em data-i18n="dash.notes_optional">optional</em></span>
+        <input name="name" maxlength="120" placeholder="Corporate site" autocomplete="off" />
+      </label>
+      <label>
+        <span class="field-label" data-i18n="ssl.hostname">Hostname</span>
+        <input name="host" required maxlength="253" placeholder="example.com" spellcheck="false" autocomplete="off" />
+        <span class="field-hint" data-i18n="ssl.host_hint">Public name such as example.com. IPs belong on the Uptime page.</span>
+      </label>
+      <p class="form-error" id="ssl-form-error" hidden></p>
+      <button class="primary wide" type="submit" id="ssl-form-submit" data-i18n="ssl.add_and_check">Add and check</button>
+    </form>
+  </div>
+</div>
+<div class="row-dropdown" id="ssl-menu" hidden role="menu"></div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/ssl.js?v=3"></script>
+{% endblock %}

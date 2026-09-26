@@ -4,12 +4,16 @@ import asyncio
 import socket
 import time
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.config import settings
 from app.pinger import is_ip_address, validate_host
 
 _cache: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+
+
+def ipv4_addresses(addresses: Optional[List[str]]) -> List[str]:
+    return [item for item in (addresses or []) if item and ":" not in str(item).strip("[]")]
 
 
 async def lookup_dns(host: str, force: bool = False) -> Dict[str, Any]:
@@ -24,6 +28,7 @@ async def lookup_dns(host: str, force: bool = False) -> Dict[str, Any]:
         "is_ip": is_ip_address(host),
         "ok": False,
         "addresses": [],
+        "ipv4": [],
         "reverse": [],
         "elapsed_ms": None,
         "error": None,
@@ -35,6 +40,7 @@ async def lookup_dns(host: str, force: bool = False) -> Dict[str, Any]:
         infos = await asyncio.wait_for(loop.getaddrinfo(host, None), timeout=3.0)
         addresses = sorted({item[4][0] for item in infos})
         payload["addresses"] = addresses
+        payload["ipv4"] = ipv4_addresses(addresses)
         payload["ok"] = True
         reverse = []
         for address in addresses[:6]:

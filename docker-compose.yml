@@ -1,8 +1,10 @@
-name: pingwatch
+name: Pingwatch
 
 services:
   mysql:
     image: mysql:8.4
+    container_name: MySQL-Pingwatch-DB
+    hostname: mysql
     restart: unless-stopped
     init: true
     command:
@@ -41,8 +43,12 @@ services:
   web:
     build:
       context: .
-      dockerfile: Dockerfile
-    image: pingwatch-web:local
+      dockerfile: ${PINGWATCH_CONTAINERFILE:-Dockerfile}
+      args:
+        PINGWATCH_VERSION: ${PINGWATCH_VERSION:-1.2.0}
+    image: ${PINGWATCH_IMAGE:-pingwatch-webclient:local}
+    container_name: Pingwatch-WebClient
+    hostname: web
     restart: unless-stopped
     init: true
     depends_on:

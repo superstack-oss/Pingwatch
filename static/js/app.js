@@ -410,7 +410,12 @@ deviceMenu?.addEventListener("click", async (event) => {
     return;
   }
   if (action === "delete") {
-    if (!confirm(t("dash.confirm_delete"))) return;
+    if (!(await confirmAction({
+      title: t("dash.confirm_delete"),
+      body: t("common.confirm_delete_body"),
+      danger: true,
+      confirmLabel: t("dash.delete"),
+    }))) return;
     try {
       await api(`/api/devices/${id}`, { method: "DELETE" });
       const tr = rows.querySelector(`tr[data-id="${id}"]`);
@@ -566,7 +571,15 @@ function syncDeviceSelection() {
 }
 
 async function bulkUpdateDevices(action, ids) {
-  if (action === "delete" && !confirm(t("dash.confirm_delete_many", { count: ids.length }))) return;
+  if (action === "delete") {
+    const ok = await confirmAction({
+      title: t("dash.confirm_delete_many", { count: ids.length }),
+      body: t("common.confirm_delete_body"),
+      danger: true,
+      confirmLabel: t("dash.delete"),
+    });
+    if (!ok) return;
+  }
   const errors = await runOnIds(ids, async (id) => {
     if (action === "delete") {
       await api(`/api/devices/${id}`, { method: "DELETE" });

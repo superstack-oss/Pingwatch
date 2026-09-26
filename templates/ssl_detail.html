@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Pingwatch{% endblock %}
+{% block page_class %}device-page{% endblock %}
+{% block heading %}
+<h1 data-i18n="page.ssl">SSL</h1>
+<p class="lede" data-i18n="page.ssl_lede">Watch live certificates and domain registration expiry.</p>
+{% endblock %}
+{% block content %}
+<div class="detail" data-ssl-id="{{ ssl_id }}">
+  <nav class="crumb" aria-label="Breadcrumb">
+    <a href="/ssl" data-i18n="page.ssl">SSL</a>
+    <span aria-hidden="true">›</span>
+    <span data-i18n="dash.details">Details</span>
+  </nav>
+
+  <header class="device-hero">
+    <div>
+      <h2 id="ssl-host-name">Loading…</h2>
+      <p class="device-meta">
+        <span class="live-dot unknown" id="ssl-host-dot" aria-hidden="true"></span>
+        <span class="mono" id="ssl-host-target">—</span>
+        <span class="meta-sep">·</span>
+        <span id="ssl-host-provider">Certificate</span>
+      </p>
+    </div>
+    <div class="device-hero-actions">
+      <a class="text-action" id="ssl-host-open" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h7v7"/><path d="M10 14L21 5"/><rect x="3" y="8" width="11" height="11" rx="2"/></svg>
+        <span data-i18n="dash.open_site">Open site</span>
+      </a>
+      <a class="text-action" id="ssl-host-report" href="/api/ssl/{{ ssl_id }}/report.pdf">
+        <img src="/static/public/download-svgrepo.svg" alt="" />
+        <span data-i18n="ssl.download_report">Download PDF report</span>
+      </a>
+      <button type="button" class="text-action" id="ssl-host-refresh">
+        <img src="/static/public/reload-svgrepo.svg" alt="" />
+        <span data-i18n="dash.refresh">Refresh</span>
+      </button>
+      <button type="button" class="text-action danger-text admin-only" id="ssl-host-remove" hidden>
+        <span data-i18n="dash.delete">Delete</span>
+      </button>
+    </div>
+  </header>
+  <p class="form-error" id="ssl-host-error" hidden></p>
+  {% include "partials/ssl_cards.html" %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/ssl-detail.js?v=2"></script>
+{% endblock %}

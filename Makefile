@@ -7,7 +7,7 @@ COMPOSE := docker compose --env-file .env
 APP_HOST ?= 127.0.0.1
 APP_PORT ?= 8000
 
-.PHONY: help install dev start test docker docker-build docker-up docker-down docker-logs docker-ps docker-restart
+.PHONY: help install dev start test docker docker-build docker-up docker-down docker-logs docker-ps docker-restart podman podman-up podman-down podman-logs podman-ps
 
 help:
 	@echo "Pingwatch"
@@ -22,6 +22,9 @@ help:
 	@echo "  make docker-ps       Show Compose service status"
 	@echo "  make docker-restart  Restart the web service"
 	@echo "  make docker-down     Stop containers (keeps volumes)"
+	@echo "  make podman          Build and start with Podman Compose"
+	@echo "  make podman-logs     Follow Podman logs"
+	@echo "  make podman-down     Stop the Podman stack"
 
 $(BIN)/pip:
 	$(PYTHON) -m venv $(VENV)
@@ -60,3 +63,18 @@ docker-restart: .env
 
 docker-down: .env
 	$(COMPOSE) down --remove-orphans
+
+PODMAN_COMPOSE := podman compose --env-file .env -f podman-compose.yml
+
+podman podman-up: .env
+	$(PODMAN_COMPOSE) up --build -d --remove-orphans
+	$(PODMAN_COMPOSE) ps
+
+podman-logs: .env
+	$(PODMAN_COMPOSE) logs -f --tail=200
+
+podman-ps: .env
+	$(PODMAN_COMPOSE) ps
+
+podman-down: .env
+	$(PODMAN_COMPOSE) down --remove-orphans

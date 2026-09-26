@@ -16,6 +16,26 @@ DEFAULTS = {
     "notify_on_access_request": "true",
     "notify_email": "",
     "notify_downtime_only": "true",
+    "notify_teams_enabled": "false",
+    "notify_teams_webhook": "",
+    "notify_slack_enabled": "false",
+    "notify_slack_webhook": "",
+    "notify_webhook_enabled": "false",
+    "notify_webhook_url": "",
+    "notify_webhook_secret": "",
+    "notify_pagerduty_enabled": "false",
+    "notify_pagerduty_routing_key": "",
+    "notify_discord_enabled": "false",
+    "notify_discord_webhook": "",
+    "notify_telegram_enabled": "false",
+    "notify_telegram_bot_token": "",
+    "notify_telegram_chat_id": "",
+    "notify_whatsapp_enabled": "false",
+    "notify_whatsapp_token": "",
+    "notify_whatsapp_phone_id": "",
+    "notify_whatsapp_to": "",
+    "notify_whatsapp_template": "",
+    "notify_whatsapp_template_lang": "en_US",
     "servicenow_enabled": "false",
     "servicenow_url": "",
     "servicenow_user": "",
@@ -31,6 +51,21 @@ DEFAULTS = {
     "incidents_enabled": "true",
     "company_name": "",
 }
+
+SECRET_SETTING_KEYS = {
+    "servicenow_password",
+    "smtp_password",
+    "notify_teams_webhook",
+    "notify_slack_webhook",
+    "notify_webhook_url",
+    "notify_webhook_secret",
+    "notify_pagerduty_routing_key",
+    "notify_discord_webhook",
+    "notify_telegram_bot_token",
+    "notify_whatsapp_token",
+}
+
+MASKED_SECRET = "••••••"
 
 PING_INTERVAL_CHOICES = (
     [1, 5, 10, 20, 30, 60, 300, 900, 1800]
@@ -94,6 +129,14 @@ async def seed_settings(db: AsyncSession) -> None:
         if existing is None:
             db.add(AppSetting(key=key, value=value))
     await db.commit()
+
+
+def redact_settings(raw: Dict[str, str]) -> Dict[str, str]:
+    payload = dict(raw)
+    for key in SECRET_SETTING_KEYS:
+        if payload.get(key):
+            payload[key] = MASKED_SECRET
+    return payload
 
 
 def public_settings(raw: Dict[str, str]) -> Dict[str, Any]:

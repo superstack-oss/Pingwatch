@@ -52,22 +52,10 @@ function formatCheckTime(value) {
   }
 }
 
-function hopRtt(hop) {
-  const match = String(hop.raw || "").match(/([\d.]+)\s*ms/i);
-  return match ? `${match[1]}ms` : "";
-}
-
 function chartPoints(history) {
   const points = history.points || [];
   if (historyRange !== "recent") return points;
   return points.slice(-48);
-}
-
-function severity(device) {
-  if (device.display_status === "offline" || device.status === "down") return { label: "Critical", cls: "crit" };
-  if (device.display_status === "warning") return { label: "Warn", cls: "warn" };
-  if (device.display_status === "paused") return { label: "Paused", cls: "info" };
-  return { label: "Info", cls: "info" };
 }
 
 function rttGrade(value) {
@@ -80,7 +68,19 @@ function rttGrade(value) {
 
 function renderHero(device) {
   document.querySelector("#device-name").textContent = device.name;
-  document.querySelector("#device-host").textContent = device.target_display || device.host;
+  document.querySelector("#device-host").textContent = device.host;
+  const ip = device.resolved_ip || (device.resolved_ips && device.resolved_ips[0]) || "";
+  const ipNode = document.querySelector("#device-ip");
+  const ipSep = document.querySelector("#device-ip-sep");
+  if (ip && ip !== device.host) {
+    ipNode.hidden = false;
+    ipSep.hidden = false;
+    ipNode.textContent = ip;
+  } else {
+    ipNode.hidden = true;
+    ipSep.hidden = true;
+    ipNode.textContent = "";
+  }
   document.querySelector("#device-kind").textContent = `${device.monitor_label || monitorLabel(device.monitor_type)} · ${kindLabel(device.kind)}`;
   document.querySelector("#device-interval").textContent = `Checking every ${intervalSeconds()} seconds`;
   document.title = `${device.name} · Pingwatch`;
@@ -103,65 +103,46 @@ function renderHero(device) {
   if (device.uptime_30d != null) sub.push(`30d ${pct(device.uptime_30d)}`);
   if (device.ci || device.item_id) sub.push(`CI ${device.ci || device.item_id}`);
   document.querySelector("#kpi-avail-sub").textContent = sub.join(" · ");
+  renderSsl(device);
 }
 
-function renderDiagnostics(device, extraInsight) {
-  const insight = extraInsight || device.insight;
-  const sev = severity(device);
-  const up = device.status === "up" && device.display_status !== "warning";
-  const probe = device.monitor_label || monitorLabel(device.monitor_type) || "Ping";
-  document.querySelector("#diag-badges").innerHTML = `
-    <span class="chip ${sev.cls}">Severity: ${sev.label}</span>
-    <span class="chip">Monitor status: ${statusLabel(device.display_status)}</span>
-    <span class="chip">Probe: ${escapeHtml(probe)} · ${escapeHtml(kindLabel(device.kind))}</span>`;
-  document.querySelector("#diag-cause").innerHTML = `<strong>Probable cause:</strong> ${escapeHtml(
-    insight
-      ? insight.summary
-      : up
-        ? "Endpoint is healthy. Probe replies are within the warning threshold."
-        : device.last_error || "No reply from this monitor."
-  )}`;
-  const host = document.querySelector("#insight");
-  if (!insight) {
-    host.innerHTML = `
-      <p class="diag-box-title">Error details and troubleshooting</p>
-      <div class="diag-facts">
-        <div><span>Error</span><strong>${escapeHtml(device.last_error || "None")}</strong></div>
-        <div><span>Error code</span><strong>—</strong></div>
-        <div><span>Scope</span><strong>${escapeHtml(kindLabel(device.kind))} / ${escapeHtml(probe)}</strong></div>
-      </div>
-      <p class="diag-box-title">Troubleshooting steps</p>
-      <ul class="diag-list">
-        <li>Confirm the ping target is the management address, not a data-plane port.</li>
-        <li>Try SSH or the vendor HTTPS UI from a jump host on the same VLAN.</li>
-        <li>If several endpoints in the same subnet fail together, inspect the shared gateway first.</li>
-      </ul>`;
-    return;
-  }
-  const causes = insight.likely_cause ? [insight.likely_cause] : [];
-  const checks = insight.checks || [];
-  host.innerHTML = `
-    <p class="diag-box-title">Error details and troubleshooting</p>
-    <div class="diag-facts">
-      <div><span>Error</span><strong>${escapeHtml(insight.title || device.last_error || "—")}</strong></div>
-      <div><span>Error code</span><strong>${escapeHtml(insight.code || "—")}</strong></div>
-      <div><span>Scope</span><strong>${escapeHtml(kindLabel(device.kind))} / ${escapeHtml(probe)}</strong></div>
-    </div>
-    ${insight.where ? `<p class="diag-where"><span>Where</span> ${escapeHtml(insight.where)}</p>` : ""}
-    ${
-      causes.length
-        ? `<p class="diag-box-title">Likely causes</p><ul class="diag-list">${causes
-            .map((item) => `<li>${escapeHtml(item)}</li>`)
-            .join("")}</ul>`
-        : ""
+let sslLookupInFlight = false;
+let sslLookupDone = false;
+
+async function lookupSsl(force) {
+  if (sslLookupInFlight) return;
+  if (!force && sslLookupDone) return;
+  sslLookupInFlight = true;
+  const button = document.querySelector("#ssl-refresh");
+  if (button) button.disabled = true;
+  try {
+    const ssl = await api(`/api/devices/${id}/ssl`, { method: "POST" });
+    sslLookupDone = true;
+    if (current) {
+      current = { ...current, ssl };
+      renderSsl(current, { skipLookup: true });
     }
-    ${
-      checks.length
-        ? `<p class="diag-box-title">Troubleshooting steps</p><ul class="diag-list">${checks
-            .map((item) => `<li>${escapeHtml(item)}</li>`)
-            .join("")}</ul>`
-        : ""
-    }`;
+  } catch (error) {
+    sslLookupDone = true;
+    const meta = document.querySelector("#ssl-status-meta");
+    if (meta) {
+      meta.hidden = false;
+      meta.textContent = error.message;
+    }
+  } finally {
+    sslLookupInFlight = false;
+    if (button) button.disabled = false;
+  }
+}
+
+function renderSsl(device, options) {
+  const ssl = device.ssl;
+  renderSslCards(ssl, device.host);
+  if (!(options && options.skipLookup) && sslNeedsLookup(ssl)) {
+    lookupSsl(false);
+  } else if (ssl && (ssl.cert || ssl.domain || !sslNeedsLookup(ssl))) {
+    sslLookupDone = true;
+  }
 }
 
 function drawUptimeBars(points) {
@@ -265,7 +246,6 @@ async function loadDevice() {
   const device = await api(`/api/devices/${id}`);
   current = device;
   renderHero(device);
-  renderDiagnostics(device);
 }
 
 async function loadHistory() {
@@ -280,92 +260,6 @@ async function loadHistory() {
   drawDowntime(points);
   drawGauge(history.avg_rtt_ms);
   drawChart(points);
-}
-
-async function loadOutages() {
-  const payload = await api(`/api/devices/${id}/outages?range=30d`);
-  const host = document.querySelector("#outages");
-  if (!payload.outages.length) {
-    host.innerHTML = emptyState({ title: "No downtime recorded", body: "Outages are created from consecutive failed probes.", compact: true });
-    return;
-  }
-  host.innerHTML = `<p class="muted">30d availability ${pct(payload.availability)}</p>
-    <ul class="outage-list">${payload.outages
-      .map((item) => {
-        return `<li>
-          <strong>${item.ongoing ? "Ongoing" : "Recovered"}</strong>
-          <span>Down ${relTime(item.started_at)}</span>
-          <span>${duration(item.duration_seconds)}</span>
-          <span>${escapeHtml(item.last_error || "No error detail")}</span>
-        </li>`;
-      })
-      .join("")}</ul>`;
-}
-
-async function loadDns(refresh) {
-  const host = document.querySelector("#dns");
-  host.innerHTML = `<p class="muted">Checking DNS…</p>`;
-  try {
-    const dns = await api(`/api/devices/${id}/dns${refresh ? "?refresh=true" : ""}`);
-    if (!dns.ok) {
-      host.innerHTML = `<p class="empty">DNS error: ${escapeHtml(dns.error || "lookup failed")}</p>`;
-      return;
-    }
-    host.innerHTML = `
-      <p><span class="dns-ok">Valid</span> <span class="mono">${escapeHtml(dns.host)}</span></p>
-      <p>A: <span class="mono">${escapeHtml((dns.addresses || []).join(", ") || "—")}</span></p>
-      <p>${dns.reverse?.length ? "Reverse" : "No reverse DNS"}</p>
-      <p class="mono">${escapeHtml((dns.reverse || []).join(", ") || "—")}</p>
-      <p class="muted">${dns.elapsed_ms} ms · ${relTime(dns.checked_at)}</p>`;
-  } catch (error) {
-    host.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
-  }
-}
-
-function renderTcp(tcp) {
-  const host = document.querySelector("#tcp-ports");
-  if (!tcp || !tcp.length) {
-    host.innerHTML = emptyState({
-      title: "No port results yet",
-      body: "Run Investigate to probe management TCP ports for this CI from Pingwatch.",
-      compact: true,
-    });
-    return;
-  }
-  host.innerHTML = `<ul class="port-list">${tcp
-    .map(
-      (item) =>
-        `<li><span class="mono">${item.port}</span><span class="pill soft ${item.open ? "online" : "offline"}"><i></i>${
-          item.open ? "Open" : "Closed"
-        }</span><span class="muted">${item.open ? ms(item.elapsed_ms) : item.error || "no answer"}</span></li>`
-    )
-    .join("")}</ul>`;
-}
-
-function renderTrace(result) {
-  const host = document.querySelector("#traceroute");
-  if (!result) {
-    host.innerHTML = emptyState({
-      title: "Trace path on demand",
-      body: "Hop-by-hop results appear here after you run a traceroute. It is not part of the regular sweep.",
-      compact: true,
-    });
-    return;
-  }
-  const hops = result.hops || [];
-  if (!hops.length) {
-    host.innerHTML = `<p class="empty">${escapeHtml(result.error || "No hops returned")}</p>`;
-    return;
-  }
-  host.innerHTML = `<p class="muted">${hops.length} hops</p>
-    <ol class="trace-list">${hops
-      .map((hop) => {
-        const rtt = hopRtt(hop);
-        return `<li><span class="mono">${hop.hop}.</span> ${escapeHtml(hop.host || "*")}${
-          rtt ? ` <span class="muted">— ${rtt}</span>` : ""
-        }</li>`;
-      })
-      .join("")}</ol>`;
 }
 
 async function loadChecks() {
@@ -409,24 +303,6 @@ async function loadChecks() {
   checkPage = payload.page;
 }
 
-async function runDiagnostics(traceroute) {
-  const waitOn = traceroute ? document.querySelector("#traceroute") : document.querySelector("#tcp-ports");
-  waitOn.innerHTML = `<p class="muted">${traceroute ? "Tracing path…" : "Running extra diagnostics…"}</p>`;
-  try {
-    const result = await api(`/api/devices/${id}/diagnostics${traceroute ? "?traceroute=true" : ""}`);
-    renderTcp(result.tcp);
-    if (result.traceroute) renderTrace(result.traceroute);
-    if (current) {
-      if (result.insight) renderDiagnostics({ ...current, insight: result.insight }, result.insight);
-      else if (!result.ping?.is_up) {
-        renderDiagnostics({ ...current, status: "down", display_status: "offline", last_error: result.ping.error });
-      }
-    }
-  } catch (error) {
-    waitOn.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
-  }
-}
-
 document.querySelector("#history-range").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-range]");
   if (!button) return;
@@ -442,14 +318,21 @@ document.querySelector("#probe").addEventListener("click", async () => {
   await api(`/api/devices/${id}/probe`, { method: "POST" });
   await refreshAll();
 });
-document.querySelector("#remove").addEventListener("click", async () => {
-  if (!confirm("Remove this device?")) return;
+document.querySelector("#ssl-refresh")?.addEventListener("click", () => {
+  lookupSsl(true);
+});
+document.querySelector("#remove")?.addEventListener("click", async () => {
+  if (!currentUser || currentUser.role !== "admin") return;
+  const ok = await confirmAction({
+    title: t("dash.confirm_delete"),
+    body: t("common.confirm_delete_body"),
+    danger: true,
+    confirmLabel: t("dash.delete"),
+  });
+  if (!ok) return;
   await api(`/api/devices/${id}`, { method: "DELETE" });
   window.location.href = "/";
 });
-document.querySelector("#refresh-dns").addEventListener("click", () => loadDns(true));
-document.querySelector("#run-diag").addEventListener("click", () => runDiagnostics(false));
-document.querySelector("#run-trace").addEventListener("click", () => runDiagnostics(true));
 document.querySelector("#check-prev").addEventListener("click", () => {
   checkPage = Math.max(1, checkPage - 1);
   loadChecks().catch(() => {});
@@ -461,12 +344,10 @@ document.querySelector("#check-next").addEventListener("click", () => {
 
 async function refreshAll() {
   await loadDevice();
-  await Promise.all([loadHistory(), loadOutages(), loadDns(false), loadChecks()]);
+  await Promise.all([loadHistory(), loadChecks()]);
 }
 
 window.sessionReady.then(() => {
-  renderTrace(null);
-  renderTcp(null);
   refreshAll().catch((error) => {
     document.querySelector("#device-name").textContent = "Unable to load device";
     const box = document.querySelector("#device-error");

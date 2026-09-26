@@ -19,6 +19,8 @@ class PingOutcome(NamedTuple):
     is_up: bool
     rtt_ms: Optional[float]
     error: Optional[str]
+    resolved_ip: Optional[str] = None
+    addresses: tuple = ()
 
 
 def validate_host(value: str) -> str:
@@ -53,7 +55,10 @@ def _ping_command(host: str, timeout: float) -> List[str]:
         return ["ping", "-c", "1", "-W", str(max(1, int(timeout * 1000))), host]
     if system == "Windows":
         return ["ping", "-n", "1", "-w", str(max(1, int(timeout * 1000))), host]
-    return ["ping", "-c", "1", "-W", str(max(1, int(round(timeout)))), host]
+    cmd = ["ping", "-c", "1", "-W", str(max(1, int(round(timeout)))), host]
+    if is_ip_address(host) and ":" not in host.strip("[]"):
+        cmd.insert(1, "-4")
+    return cmd
 
 
 def classify_ping_error(output: str, returncode: Optional[int]) -> str:

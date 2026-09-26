@@ -243,7 +243,13 @@ async function uploadAttachments(fileList) {
 }
 
 async function removeAttachment(id) {
-  if (!confirm(t("incidents.confirm_remove_file"))) return;
+  const ok = await confirmAction({
+    title: t("incidents.confirm_remove_file"),
+    body: t("common.confirm_delete_body"),
+    danger: true,
+    confirmLabel: t("common.remove"),
+  });
+  if (!ok) return;
   const error = document.querySelector("#inc-attach-error");
   if (error) error.hidden = true;
   try {

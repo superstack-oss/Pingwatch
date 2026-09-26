@@ -12,7 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.db import SessionLocal
 from app.mailer import notify
-from app.models import ACTIVE_INCIDENT_STATUSES, Device, Incident, IncidentNote, PingResult, User, format_incident_number
+from app.models import ACTIVE_INCIDENT_STATUSES, Device, Incident, IncidentNote, PingResult, SslHost, User, format_incident_number
+from app.notifiers import AlertEvent, dispatch_alert
 from app.insight import (
     build_insight,
     issue_priority,
@@ -23,6 +24,7 @@ from app.insight import (
 from app.monitors import down_phrase, probe_device
 from app.servicenow import create_incident
 from app.settings_store import all_settings, clamp_ping_interval, get_setting, setting_flag
+from app.sslcheck import refresh_device_ssl, refresh_ssl_host
 
 log = logging.getLogger("pingwatch.monitor")
 HISTORY_LIMIT = 40
@@ -32,17 +34,30 @@ def _flag(config: dict, key: str) -> bool:
     return str(config.get(key) or "").lower() in {"1", "true", "yes", "on"}
 
 
-async def _send_alerts(session: AsyncSession, config: dict, subject: str, body: str) -> None:
+async def _send_alerts(
+    session: AsyncSession,
+    config: dict,
+    subject: str,
+    body: str,
+    event: Optional[AlertEvent] = None,
+) -> None:
     target = (config.get("notify_email") or "").strip()
     if target:
         await notify(session, target, subject, body)
-        return
-    admins = (
-        await session.execute(select(User).where(User.role == "admin", User.status == "active"))
-    ).scalars().all()
-    for admin in admins:
-        if admin.email:
-            await notify(session, admin.email, subject, body)
+    else:
+        admins = (
+            await session.execute(select(User).where(User.role == "admin", User.status == "active"))
+        ).scalars().all()
+        for admin in admins:
+            if admin.email:
+                await notify(session, admin.email, subject, body)
+    payload = event or AlertEvent(kind="down", subject=subject, body=body)
+    payload.subject = payload.subject or subject
+    payload.body = payload.body or body
+    try:
+        await dispatch_alert(config, payload)
+    except Exception:
+        log.exception("Alert channel dispatch failed")
 
 
 class Monitor:
@@ -92,28 +107,49 @@ class Monitor:
                 else:
                     query = query.where(Device.service_mode == 0)
                 devices = (await session.execute(query)).scalars().all()
-                if not devices:
-                    if device_id is None:
-                        self.last_sweep_at = datetime.utcnow()
-                    return
+                if devices:
+                    semaphore = asyncio.Semaphore(settings.ping_concurrency)
 
-                semaphore = asyncio.Semaphore(settings.ping_concurrency)
+                    async def probe(device: Device):
+                        async with semaphore:
+                            result = await probe_device(device, settings.ping_timeout)
+                        return device, result
 
-                async def probe(device: Device):
-                    async with semaphore:
-                        result = await probe_device(device, settings.ping_timeout)
-                    return device, result
+                    outcomes = await asyncio.gather(*(probe(device) for device in devices))
+                    for device, outcome in outcomes:
+                        await self._record(session, device, outcome.is_up, outcome.rtt_ms, outcome.error)
 
-                outcomes = await asyncio.gather(*(probe(device) for device in devices))
-                for device, outcome in outcomes:
-                    await self._record(session, device, outcome.is_up, outcome.rtt_ms, outcome.error)
-                await self._prune(session)
-                await session.commit()
+                    async def ssl_refresh(device: Device) -> None:
+                        try:
+                            await refresh_device_ssl(device, force=device_id is not None, session=session)
+                        except Exception:
+                            log.debug("SSL lookup failed for %s", device.host, exc_info=True)
+
+                    await asyncio.gather(*(ssl_refresh(device) for device, _outcome in outcomes))
+
                 if device_id is None:
+                    await self._refresh_ssl_hosts(session)
+                    await self._prune(session)
+                    await session.commit()
                     self.last_sweep_at = datetime.utcnow()
+                elif devices:
+                    await session.commit()
 
     async def probe_one(self, device_id: int) -> None:
         await self.sweep(device_id=device_id)
+
+    async def _refresh_ssl_hosts(self, session: AsyncSession) -> None:
+        hosts = (await session.execute(select(SslHost))).scalars().all()
+        if not hosts:
+            return
+
+        async def refresh_one(row: SslHost) -> None:
+            try:
+                await refresh_ssl_host(row, force=False)
+            except Exception:
+                log.debug("SSL host lookup failed for %s", row.host, exc_info=True)
+
+        await asyncio.gather(*(refresh_one(row) for row in hosts))
 
     async def _record(
         self,
@@ -350,7 +386,23 @@ class Monitor:
         except Exception:
             log.exception("ServiceNow incident create failed")
         if mailed and _flag(config, "notify_on_down"):
-            await _send_alerts(session, config, subject, detail)
+            await _send_alerts(
+                session,
+                config,
+                subject,
+                detail,
+                AlertEvent(
+                    kind="down",
+                    subject=subject,
+                    body=detail,
+                    device_id=device.id,
+                    device_name=device.name,
+                    device_host=device.host,
+                    monitor_type=getattr(device, "monitor_type", None) or "ping",
+                    incident_number=number,
+                    priority=priority,
+                ),
+            )
 
     async def _close_incident(self, session: AsyncSession, device: Device, now: datetime) -> None:
         rows = await self._active_incidents(session, device.id)
@@ -376,7 +428,21 @@ class Monitor:
         config = await all_settings(session)
         if _flag(config, "notify_on_down") and not _flag(config, "notify_downtime_only"):
             detail = "CI %s (%s) is responding again." % (device.name, device.host)
-            await _send_alerts(session, config, "Pingwatch: %s recovered" % device.name, detail)
+            await _send_alerts(
+                session,
+                config,
+                "Pingwatch: %s recovered" % device.name,
+                detail,
+                AlertEvent(
+                    kind="recovered",
+                    subject="Pingwatch: %s recovered" % device.name,
+                    body=detail,
+                    device_id=device.id,
+                    device_name=device.name,
+                    device_host=device.host,
+                    monitor_type=getattr(device, "monitor_type", None) or "ping",
+                ),
+            )
 
     async def _prune(self, session: AsyncSession) -> None:
         cutoff = datetime.utcnow() - timedelta(days=settings.history_keep_days)

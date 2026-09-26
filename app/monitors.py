@@ -8,9 +8,10 @@ from app.checks_dns import DNS_TYPES, query_resolver
 from app.checks_game import check_game
 from app.checks_grpc import check_grpc
 from app.checks_ws import check_websocket
+from app.dnscheck import ipv4_addresses, lookup_dns
 from app.game_types import GAMES, game_choices, game_info, normalize_game_id
 from app.netcheck import check_tcp
-from app.pinger import PingOutcome, ping_host, validate_host
+from app.pinger import PingOutcome, is_ip_address, ping_host, validate_host
 
 MONITOR_TYPES = ("ping", "tcp", "dns", "websocket", "grpc", "game")
 
@@ -167,6 +168,9 @@ def target_display(monitor_type: str, host: str, port: Optional[int], spec: Opti
         info = game_info(str(spec.get("game_type") or ""))
         label = info[0] if info else spec.get("game_type") or "game"
         return "%s:%s (%s)" % (host, port, label)
+    resolved = spec.get("resolved_ip")
+    if resolved and resolved != host:
+        return "%s (%s)" % (host, resolved)
     return host
 
 
@@ -286,11 +290,51 @@ def apply_monitor_fields(device: Any, incoming: Dict[str, Any]) -> MonitorTarget
     return target
 
 
+def _store_resolved(device: Any, outcome: PingOutcome) -> None:
+    if not outcome.resolved_ip and not outcome.addresses:
+        return
+    spec = parse_spec(getattr(device, "monitor_spec", None))
+    if outcome.resolved_ip:
+        spec["resolved_ip"] = outcome.resolved_ip
+    if outcome.addresses:
+        spec["resolved_ips"] = list(outcome.addresses)
+    device.monitor_spec = dump_spec(spec)
+
+
+async def _probe_ping(host: str, timeout: float) -> PingOutcome:
+    if is_ip_address(host):
+        return await ping_host(host, timeout)
+    dns = await lookup_dns(host)
+    addresses = ipv4_addresses(dns.get("ipv4") or dns.get("addresses")) or list(dns.get("addresses") or [])
+    if not dns.get("ok") or not addresses:
+        return PingOutcome(False, None, dns.get("error") or "DNS resolution failed")
+    last = PingOutcome(False, None, "Request timeout", resolved_ip=addresses[0], addresses=tuple(addresses))
+    for ip in addresses[:3]:
+        result = await ping_host(ip, timeout)
+        last = PingOutcome(result.is_up, result.rtt_ms, result.error, resolved_ip=ip, addresses=tuple(addresses))
+        if result.is_up:
+            return last
+    for ip in addresses[:2]:
+        for port in (443, 80):
+            tcp = await check_tcp(ip, port, timeout)
+            if tcp.get("open"):
+                return PingOutcome(
+                    True,
+                    tcp.get("elapsed_ms"),
+                    None,
+                    resolved_ip=ip,
+                    addresses=tuple(addresses),
+                )
+    return last
+
+
 async def probe_device(device: Any, timeout: float) -> PingOutcome:
     try:
         target = target_from_device(device)
         if target.monitor_type == "ping":
-            return await ping_host(target.host, timeout)
+            outcome = await _probe_ping(target.host, timeout)
+            _store_resolved(device, outcome)
+            return outcome
         if target.monitor_type == "tcp":
             result = await check_tcp(target.host, int(target.port or 0), timeout)
             if result.get("open"):

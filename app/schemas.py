@@ -100,6 +100,136 @@ class DeviceCreate(BaseModel):
         return self
 
 
+class SslCertOut(BaseModel):
+    not_after: Optional[datetime] = None
+    not_before: Optional[datetime] = None
+    issuer: Optional[str] = None
+    provider: Optional[str] = None
+    logo: Optional[str] = None
+    subject: Optional[str] = None
+    common_name: Optional[str] = None
+    sans: List[str] = []
+    serial: Optional[str] = None
+    port: Optional[int] = None
+    days_left: Optional[int] = None
+    status: Optional[str] = None
+    authorized: Optional[bool] = None
+    checked_at: Optional[datetime] = None
+    error: Optional[str] = None
+
+
+class SslDomainOut(BaseModel):
+    name: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    registered_at: Optional[datetime] = None
+    registrar: Optional[str] = None
+    days_left: Optional[int] = None
+    status: Optional[str] = None
+    checked_at: Optional[datetime] = None
+    error: Optional[str] = None
+
+
+class SslOut(BaseModel):
+    applicable: bool = False
+    has_tls: bool = False
+    has_domain: bool = False
+    host: Optional[str] = None
+    cert: Optional[SslCertOut] = None
+    domain: Optional[SslDomainOut] = None
+
+
+class SslHostCreate(BaseModel):
+    name: Optional[str] = Field(default=None, max_length=120)
+    host: str = Field(min_length=1, max_length=253)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def clean_ssl_name(cls, value: Optional[str]) -> Optional[str]:
+        value = empty_to_none(value)
+        if value is None:
+            return None
+        cleaned = " ".join(str(value).split())
+        return cleaned or None
+
+    @field_validator("host")
+    @classmethod
+    def clean_ssl_host(cls, value: str) -> str:
+        from app.sslcheck import normalize_ssl_host
+
+        return normalize_ssl_host(value)
+
+    @model_validator(mode="after")
+    def default_ssl_name(self):
+        if not self.name:
+            self.name = self.host
+        return self
+
+
+class SslHostUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, max_length=120)
+    host: Optional[str] = Field(default=None, max_length=253)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def clean_ssl_name(cls, value: Optional[str]) -> Optional[str]:
+        value = empty_to_none(value)
+        if value is None:
+            return None
+        cleaned = " ".join(str(value).split())
+        return cleaned or None
+
+    @field_validator("host", mode="before")
+    @classmethod
+    def clean_ssl_host(cls, value: Optional[str]) -> Optional[str]:
+        value = empty_to_none(value)
+        if value is None:
+            return None
+        from app.sslcheck import normalize_ssl_host
+
+        return normalize_ssl_host(value)
+
+    @model_validator(mode="after")
+    def require_one_field(self):
+        if self.name is None and self.host is None:
+            raise ValueError("Provide a name or hostname")
+        return self
+
+
+class SslHostOut(BaseModel):
+    id: int
+    name: str
+    host: str
+    status: str = "Unknown"
+    issuer: Optional[str] = None
+    provider: Optional[str] = None
+    logo: Optional[str] = None
+    subject: Optional[str] = None
+    days_left: Optional[int] = None
+    not_after: Optional[datetime] = None
+    not_before: Optional[datetime] = None
+    domain_name: Optional[str] = None
+    domain_expires: Optional[datetime] = None
+    domain_days: Optional[int] = None
+    domain_status: Optional[str] = None
+    last_checked_at: Optional[datetime] = None
+    error: Optional[str] = None
+    ssl: Optional[SslOut] = None
+
+
+class SslHostListOut(BaseModel):
+    hosts: List[SslHostOut]
+    total: int
+    filtered_total: int
+    valid: int = 0
+    expiring: int = 0
+    expired: int = 0
+    invalid: int = 0
+    last_checked_at: Optional[datetime] = None
+    page: int = 1
+    page_size: int = 25
+    pages: int = 1
+
+
 class DeviceOut(BaseModel):
     id: int
     item_id: Optional[str] = None
@@ -123,6 +253,8 @@ class DeviceOut(BaseModel):
     last_up_at: Optional[datetime]
     last_error: Optional[str]
     created_at: datetime
+    resolved_ip: Optional[str] = None
+    resolved_ips: List[str] = []
     uptime_24h: Optional[float]
     avg_rtt_ms: Optional[float]
     min_rtt_ms: Optional[float]
@@ -200,6 +332,7 @@ class DeviceDetailOut(DeviceOut):
     downtime_duration_seconds: Optional[int] = None
     failure_count_7d: int = 0
     failure_count_30d: int = 0
+    ssl: Optional[SslOut] = None
 
 
 class DeviceUpdate(BaseModel):

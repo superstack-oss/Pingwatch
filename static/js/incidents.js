@@ -10,6 +10,7 @@ let incidentPage = 1;
 const incidentMenu = document.querySelector("#incident-menu");
 const isArchive = Boolean(document.querySelector(".archive-page"));
 const incidentPager = document.querySelector("#incident-pager");
+const filterDeviceId = (document.querySelector("#incident-scope")?.dataset.deviceId || "").trim();
 
 function menuIcon(name) {
   const stroke = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
@@ -67,6 +68,7 @@ function listQuery() {
   params.set("page_size", String(PAGE_SIZE));
   const status = document.querySelector("#incident-status")?.value;
   if (status) params.set("status", status);
+  if (filterDeviceId) params.set("device_id", filterDeviceId);
   return `/api/incidents?${params.toString()}`;
 }
 
@@ -100,8 +102,8 @@ async function loadIncidents() {
     setPager(incidentPager, 1, 1);
     empty.hidden = false;
     empty.innerHTML = emptyState({
-      title: t(isArchive ? "incidents.archive_none" : "incidents.none"),
-      body: t(isArchive ? "incidents.archive_none_body" : "incidents.none_body"),
+      title: t(isArchive ? "incidents.archive_none" : filterDeviceId ? "incidents.none_device" : "incidents.none"),
+      body: t(isArchive ? "incidents.archive_none_body" : filterDeviceId ? "incidents.none_device_body" : "incidents.none_body"),
     });
     syncIncidentSelection();
     return;
@@ -118,7 +120,7 @@ async function loadIncidents() {
         const priority = item.priority || "P3";
         const short = item.short_description || item.last_error || "—";
         return `<tr data-id="${item.id}">
-        ${checkCell(item.id)}
+        ${currentUser?.role === "admin" ? checkCell(item.id) : ""}
         <td class="mono"><a class="incident-link" href="/incidents/${item.id}">${escapeHtml(item.number)}</a></td>
         <td><span class="pill ${PRIORITY_PILL[priority] || "p3"}"><i></i>${escapeHtml(priority)}</span></td>
         <td class="issue-cell" title="${escapeHtml(short)}">${escapeHtml(short)}</td>
@@ -140,7 +142,16 @@ async function loadIncidents() {
 async function updateIncident(id, action, status) {
   const error = document.querySelector("#incident-error");
   error.hidden = true;
-  if (action === "delete" && !confirm(t("incidents.confirm_delete"))) return;
+  if (action === "delete" && currentUser?.role !== "admin") return;
+  if (action === "delete") {
+    const ok = await confirmAction({
+      title: t("incidents.confirm_delete"),
+      body: t("common.confirm_delete_body"),
+      danger: true,
+      confirmLabel: t("dash.delete"),
+    });
+    if (!ok) return;
+  }
   const payload = { action };
   if (status) payload.status = status;
   try {
@@ -201,6 +212,7 @@ const incidentTable = document.querySelector(".incidents-table");
 const incidentBulk = document.querySelector("#incident-bulk");
 
 function incidentBulkActions(ids) {
+  if (currentUser?.role !== "admin") return "";
   return bulkBarHtml(ids.length, [{ id: "delete", label: t("incidents.delete"), danger: true }]);
 }
 
@@ -211,7 +223,16 @@ function syncIncidentSelection() {
 async function bulkUpdateIncidents(action, ids) {
   const error = document.querySelector("#incident-error");
   if (error) error.hidden = true;
-  if (action === "delete" && !confirm(t("incidents.confirm_delete_many", { count: ids.length }))) return;
+  if (action === "delete" && currentUser?.role !== "admin") return;
+  if (action === "delete") {
+    const ok = await confirmAction({
+      title: t("incidents.confirm_delete_many", { count: ids.length }),
+      body: t("common.confirm_delete_body"),
+      danger: true,
+      confirmLabel: t("dash.delete"),
+    });
+    if (!ok) return;
+  }
   const errors = await runOnIds(ids, (id) =>
     api(`/api/incidents/${id}`, {
       method: "PATCH",

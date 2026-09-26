@@ -1,0 +1,82 @@
+  <section class="ssl-panel" id="ssl-panel" hidden>
+    <p class="ssl-kicker" data-i18n="ssl.kicker">Certificate</p>
+    <header>
+      <div>
+        <h2 data-i18n="ssl.title">SSL status, certificate, and domain expiry.</h2>
+        <p class="ssl-lede" data-i18n="ssl.lede">This reads the live certificate on port 443 and the domain registration record.</p>
+      </div>
+      <button type="button" class="icon-btn" id="ssl-refresh" title="Refresh certificate and domain dates" aria-label="Refresh certificate and domain dates" data-i18n-title="ssl.refresh" data-i18n-aria="ssl.refresh">
+        <img src="/static/public/reload-svgrepo.svg" alt="" />
+      </button>
+    </header>
+    <div class="ssl-grid">
+      <article class="ssl-card" id="ssl-status-card" hidden>
+        <p class="ssl-card-label" data-i18n="ssl.status">SSL status</p>
+        <div id="ssl-status-pill"></div>
+        <p class="ssl-card-meta" id="ssl-status-meta"></p>
+        <dl class="ssl-dl">
+          <div>
+            <dt data-i18n="ssl.days">Days remaining</dt>
+            <dd id="ssl-days">—</dd>
+          </div>
+          <div>
+            <dt data-i18n="ssl.cert_expires">Certificate expires</dt>
+            <dd id="ssl-expires">—</dd>
+          </div>
+        </dl>
+      </article>
+      <article class="ssl-card" id="ssl-cert-card" hidden>
+        <p class="ssl-card-label" data-i18n="ssl.cert">Certificate</p>
+        <div class="ssl-cert-head">
+          <img id="ssl-ca-logo" class="ssl-ca-logo" alt="" hidden />
+          <h3 id="ssl-cert-subject">—</h3>
+        </div>
+        <dl class="ssl-dl">
+          <div>
+            <dt data-i18n="ssl.issuer">Issuer</dt>
+            <dd id="ssl-issuer">—</dd>
+          </div>
+          <div>
+            <dt data-i18n="ssl.valid_from">Valid from</dt>
+            <dd id="ssl-valid-from">—</dd>
+          </div>
+          <div>
+            <dt data-i18n="ssl.valid_to">Valid to</dt>
+            <dd id="ssl-valid-to">—</dd>
+          </div>
+          <div>
+            <dt data-i18n="ssl.names">Names</dt>
+            <dd id="ssl-names">—</dd>
+          </div>
+          <div>
+            <dt data-i18n="ssl.serial">Serial</dt>
+            <dd id="ssl-serial" class="ssl-mono">—</dd>
+          </div>
+        </dl>
+      </article>
+      <article class="ssl-card" id="ssl-domain-card" hidden>
+        <p class="ssl-card-label" data-i18n="ssl.domain">Domain expiry</p>
+        <div id="ssl-domain-pill"></div>
+        <h3 id="ssl-domain-name">—</h3>
+        <p class="ssl-card-meta" id="ssl-domain-error" hidden></p>
+        <dl class="ssl-dl" id="ssl-domain-dl">
+          <div>
+            <dt data-i18n="ssl.expires">Expires</dt>
+            <dd id="ssl-domain-expires">—</dd>
+          </div>
+          <div>
+            <dt data-i18n="ssl.days">Days remaining</dt>
+            <dd id="ssl-domain-days">—</dd>
+          </div>
+          <div>
+            <dt data-i18n="ssl.registered">Registered</dt>
+            <dd id="ssl-domain-registered">—</dd>
+          </div>
+          <div>
+            <dt data-i18n="ssl.registrar">Registrar</dt>
+            <dd id="ssl-domain-registrar">—</dd>
+          </div>
+        </dl>
+      </article>
+    </div>
+  </section>

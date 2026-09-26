@@ -1,0 +1,111 @@
+# Pingwatch stack for Podman Compose.
+#   podman compose --env-file .env -f podman-compose.yml up --build -d
+# Prefer rootful Podman if ICMP ping monitors need NET_RAW.
+
+name: Pingwatch
+
+services:
+  mysql:
+    image: docker.io/library/mysql:8.4
+    container_name: MySQL-Pingwatch-DB
+    hostname: mysql
+    restart: unless-stopped
+    init: true
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-name-resolve
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-pingwatch}
+      MYSQL_USER: ${MYSQL_USER:-pingwatch}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:${MYSQL_PUBLISH_PORT:-3307}:3306"
+    networks:
+      - backend
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    build:
+      context: .
+      dockerfile: Containerfile
+      args:
+        PINGWATCH_VERSION: ${PINGWATCH_VERSION:-1.2.0}
+    image: ${PINGWATCH_IMAGE:-localhost/pingwatch-webclient:local}
+    container_name: Pingwatch-WebClient
+    hostname: web
+    restart: unless-stopped
+    init: true
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "${APP_BIND:-0.0.0.0}:${APP_PORT:-8000}:8000"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: ${MYSQL_USER:-pingwatch}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-pingwatch}
+      PING_INTERVAL: ${PING_INTERVAL:-30}
+      PING_TIMEOUT: ${PING_TIMEOUT:-2.0}
+      PING_CONCURRENCY: ${PING_CONCURRENCY:-40}
+      HISTORY_KEEP_DAYS: ${HISTORY_KEEP_DAYS:-31}
+      WARNING_RTT_MS: ${WARNING_RTT_MS:-200}
+      DNS_CACHE_TTL: ${DNS_CACHE_TTL:-300}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DEFAULT_ADMIN_USERNAME: ${DEFAULT_ADMIN_USERNAME:-admin}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-Password@123}
+    volumes:
+      - incident_uploads:/app/data/incident-attachments
+    tmpfs:
+      - /tmp:uid=1000,gid=1000,mode=1777,size=64m
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4)",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 35s
+    stop_grace_period: 25s
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  mysql_data:
+  incident_uploads:

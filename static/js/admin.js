@@ -271,6 +271,8 @@ async function loadSettings() {
     if (value) ping.value = value;
   }
   syncAppearance();
+  paintChannelOptions();
+  showNotifyChannel(firstEnabledChannel());
 }
 
 document.querySelector("#admin-devices").addEventListener("click", async (event) => {
@@ -286,7 +288,14 @@ document.querySelector("#admin-devices").addEventListener("click", async (event)
     document.querySelector("#device-form-title").setAttribute("data-i18n", "admin.update_device");
     document.querySelector("#device-modal").hidden = false;
   }
-  if (del && confirm(t("admin.remove_confirm"))) {
+  if (del) {
+    const ok = await confirmAction({
+      title: t("admin.remove_confirm"),
+      body: t("common.confirm_delete_body"),
+      danger: true,
+      confirmLabel: t("dash.delete"),
+    });
+    if (!ok) return;
     await api(`/api/devices/${del.dataset.del}`, { method: "DELETE" });
     loadDevices();
   }
@@ -399,6 +408,151 @@ document.querySelector("#snow-test").addEventListener("click", async () => {
   document.querySelector("#snow-result").textContent = result.result;
 });
 
+const CHANNEL_ICONS = {
+  teams: "/static/public/teams-svgrepo-com.svg",
+  slack: "/static/public/slack-svgrepo-com.svg",
+  webhook: "/static/public/webhook-svgrepo-com.svg",
+  pagerduty: "/static/public/pager-duty-svgrepo-com.svg",
+  discord: "/static/public/discord-communication-interaction-message-network-svgrepo-com.svg",
+  telegram: "/static/public/telegram-svgrepo-com.svg",
+  whatsapp: "/static/public/whatsapp-svgrepo-com.svg",
+};
+
+function selectedNotifyChannel() {
+  return document.querySelector("#notify-channel")?.value || "teams";
+}
+
+function setChannelMenuOpen(open) {
+  const menu = document.querySelector("#channel-menu");
+  const button = document.querySelector("#channel-select-btn");
+  if (!menu || !button) return;
+  menu.hidden = !open;
+  button.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function showNotifyChannel(id) {
+  const channel = id || "teams";
+  document.querySelectorAll(".channel-block[data-channel]").forEach((block) => {
+    block.hidden = block.dataset.channel !== channel;
+  });
+  const hidden = document.querySelector("#notify-channel");
+  if (hidden) hidden.value = channel;
+  const icon = document.querySelector("#channel-select-icon");
+  if (icon && CHANNEL_ICONS[channel]) icon.src = CHANNEL_ICONS[channel];
+  const label = document.querySelector("#channel-select-label");
+  if (label) label.textContent = t(`admin.channel_${channel}`);
+  document.querySelectorAll("#channel-menu [data-channel]").forEach((item) => {
+    item.classList.toggle("is-selected", item.dataset.channel === channel);
+  });
+}
+
+function firstEnabledChannel() {
+  const form = document.querySelector("#settings-form");
+  const items = document.querySelectorAll("#channel-menu [data-channel]");
+  if (!form || !items.length) return "teams";
+  const match = Array.from(items).find((item) => form.elements[`notify_${item.dataset.channel}_enabled`]?.checked);
+  return match ? match.dataset.channel : selectedNotifyChannel();
+}
+
+function paintChannelOptions() {
+  const form = document.querySelector("#settings-form");
+  if (!form) return;
+  document.querySelectorAll("#channel-menu [data-channel]").forEach((item) => {
+    const channel = item.dataset.channel;
+    const on = form.elements[`notify_${channel}_enabled`]?.checked;
+    const label = item.querySelector("[data-channel-label]");
+    if (label) label.textContent = t(`admin.channel_${channel}`);
+    const badge = item.querySelector(".channel-on");
+    if (badge) {
+      badge.hidden = !on;
+      badge.textContent = t("admin.channel_on");
+    }
+  });
+  const current = selectedNotifyChannel();
+  const label = document.querySelector("#channel-select-label");
+  if (label) label.textContent = t(`admin.channel_${current}`);
+}
+
+function openChannelGuide() {
+  const channel = selectedNotifyChannel();
+  const modal = document.querySelector("#channel-guide-modal");
+  const title = document.querySelector("#channel-guide-title");
+  const body = document.querySelector("#channel-guide-body");
+  if (!modal || !title || !body) return;
+  title.textContent = t(`admin.guide.${channel}.title`);
+  const introKey = `admin.guide.${channel}.intro`;
+  const intro = t(introKey);
+  const steps = [];
+  for (let i = 1; i <= 8; i += 1) {
+    const key = `admin.guide.${channel}.${i}`;
+    const text = t(key);
+    if (text === key) break;
+    steps.push(text);
+  }
+  const introHtml = intro && intro !== introKey ? `<p>${escapeHtml(intro)}</p>` : "";
+  body.innerHTML = `${introHtml}<ol>${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>`;
+  modal.hidden = false;
+}
+
+function closeChannelGuide() {
+  const modal = document.querySelector("#channel-guide-modal");
+  if (modal) modal.hidden = true;
+}
+
+document.querySelector("#channel-select-btn")?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  const menu = document.querySelector("#channel-menu");
+  setChannelMenuOpen(Boolean(menu?.hidden));
+});
+
+document.querySelector("#channel-menu")?.addEventListener("click", (event) => {
+  const item = event.target.closest("[data-channel]");
+  if (!item) return;
+  showNotifyChannel(item.dataset.channel);
+  setChannelMenuOpen(false);
+});
+
+document.addEventListener("click", (event) => {
+  if (event.target.closest("#channel-select")) return;
+  setChannelMenuOpen(false);
+});
+
+document.querySelector("#settings-form")?.addEventListener("change", (event) => {
+  const name = event.target?.name || "";
+  if (name.startsWith("notify_") && name.endsWith("_enabled")) paintChannelOptions();
+});
+
+document.querySelector("#channel-guide-btn")?.addEventListener("click", openChannelGuide);
+document.querySelector("#channel-guide-close")?.addEventListener("click", closeChannelGuide);
+document.querySelector("#channel-guide-modal")?.addEventListener("click", (event) => {
+  if (event.target.id === "channel-guide-modal") closeChannelGuide();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeChannelGuide();
+    setChannelMenuOpen(false);
+  }
+});
+window.addEventListener("pingwatch:i18n", paintChannelOptions);
+
+document.querySelector("#settings-form")?.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-notify-test]");
+  if (!button) return;
+  const channel = button.dataset.notifyTest;
+  const out = document.querySelector(`[data-notify-result="${channel}"]`);
+  if (out) out.textContent = "…";
+  try {
+    const result = await api("/api/admin/notifications/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel }),
+    });
+    if (out) out.textContent = result.result === "ok" ? t("admin.channel_test_ok") : result.result;
+  } catch (err) {
+    if (out) out.textContent = err.message;
+  }
+});
+
 document.querySelector("#appearance-theme")?.addEventListener("change", (event) => {
   applyTheme(event.target.value);
 });
@@ -475,7 +629,13 @@ document.querySelector("#announce-form")?.addEventListener("submit", async (even
 document.querySelector("#admin-announcements")?.addEventListener("click", async (event) => {
   const btn = event.target.closest("[data-announcement]");
   if (!btn) return;
-  if (!confirm(t("admin.announce_remove"))) return;
+  const ok = await confirmAction({
+    title: t("admin.announce_remove"),
+    body: t("common.confirm_delete_body"),
+    danger: true,
+    confirmLabel: t("dash.delete"),
+  });
+  if (!ok) return;
   await api(`/api/announcements/${btn.dataset.announcement}`, { method: "DELETE" });
   await loadAnnouncements();
   if (typeof refreshNotifications === "function") refreshNotifications();
@@ -485,7 +645,15 @@ bindTableSelection(document.querySelector("#admin-devices-table"), {
   bar: document.querySelector("#admin-devices-bulk"),
   renderActions: adminDeviceBulkActions,
   onAction: async (action, ids) => {
-    if (action === "delete" && !confirm(t("dash.confirm_delete_many", { count: ids.length }))) return;
+    if (action === "delete") {
+      const ok = await confirmAction({
+        title: t("dash.confirm_delete_many", { count: ids.length }),
+        body: t("common.confirm_delete_body"),
+        danger: true,
+        confirmLabel: t("dash.delete"),
+      });
+      if (!ok) return;
+    }
     await runOnIds(ids, async (id) => {
       if (action === "delete") {
         await api(`/api/devices/${id}`, { method: "DELETE" });
@@ -504,7 +672,13 @@ bindTableSelection(document.querySelector("#admin-users-table"), {
   bar: document.querySelector("#admin-users-bulk"),
   renderActions: adminUserBulkActions,
   onAction: async (action, ids) => {
-    if (!confirm(t("admin.confirm_status_many", { count: ids.length }))) return;
+    const ok = await confirmAction({
+      title: t("admin.confirm_status_many", { count: ids.length }),
+      body: t("common.confirm_body"),
+      danger: true,
+      confirmLabel: t("common.continue"),
+    });
+    if (!ok) return;
     const status = action === "enable" ? "active" : "disabled";
     const table = document.querySelector("#admin-users-table");
     const filtered = ids.filter((id) => {
@@ -526,7 +700,13 @@ bindTableSelection(document.querySelector("#admin-announcements-table"), {
   renderActions: adminAnnounceBulkActions,
   onAction: async (action, ids) => {
     if (action !== "delete") return;
-    if (!confirm(t("common.confirm_delete_many", { count: ids.length }))) return;
+    const ok = await confirmAction({
+      title: t("common.confirm_delete_many", { count: ids.length }),
+      body: t("common.confirm_delete_body"),
+      danger: true,
+      confirmLabel: t("dash.delete"),
+    });
+    if (!ok) return;
     await runOnIds(ids, (id) => api(`/api/announcements/${id}`, { method: "DELETE" }));
     await loadAnnouncements();
     if (typeof refreshNotifications === "function") refreshNotifications();
@@ -537,7 +717,13 @@ bindTableSelection(document.querySelector("#admin-requests-table"), {
   renderActions: adminRequestBulkActions,
   onAction: async (action, ids) => {
     if (action !== "approved" && action !== "rejected") return;
-    if (!confirm(t("admin.confirm_review_many", { count: ids.length }))) return;
+    const ok = await confirmAction({
+      title: t("admin.confirm_review_many", { count: ids.length }),
+      body: t("common.confirm_body"),
+      danger: true,
+      confirmLabel: t("common.continue"),
+    });
+    if (!ok) return;
     await runOnIds(ids, (id) =>
       api(`/api/admin/access-requests/${id}/review`, {
         method: "POST",

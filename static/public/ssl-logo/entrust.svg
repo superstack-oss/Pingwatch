@@ -1,0 +1,26 @@
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 42.4 49" style="enable-background:new 0 0 42.4 49;" xml:space="preserve">
+ <style type="text/css">
+  .st0{fill-rule:evenodd;clip-rule:evenodd;fill:#762B8A;}
+	.st1{fill:url(#SVGID_1_);}
+ </style>
+ <metadata>
+  
+   
+   
+   
+   
+  
+ </metadata>
+ <g>
+  <path class="st0" d="M0,36.7L21.2,49l21.2-12.2V12.3L21.2,0L0,12.3V36.7z M39,14.2v20.6L21.2,45.1L3.4,34.8V14.2L21.2,3.9L39,14.2z">
+  </path>
+  <linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="21.2177" y1="43.6121" x2="21.2177" y2="10.3733" gradientTransform="matrix(1 0 0 -1 0 51.4927)">
+   <stop offset="0.2" style="stop-color:#C6168D">
+   </stop>
+   <stop offset="0.8" style="stop-color:#762B8A">
+   </stop>
+  </linearGradient>
+  <path class="st1" d="M24.6,35.8v-3.4l11-6.4v-3.4l-11,6.3v-3.4l11-6.3l0-3L21.2,7.9L6.8,16.2v16.6l14.4,8.3l14.4-8.3v-3.4&#xA;&#x9;&#x9;L24.6,35.8z">
+  </path>
+ </g>
+</svg>

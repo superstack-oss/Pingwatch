@@ -14,8 +14,17 @@ from app.monitors import apply_monitor_fields
 from app.queries import RANGE_DELTA, TABLE_PAGE_SIZE, page_bounds, recent_by_device, stats_since, to_device_out
 from app.schemas import DeviceOut, DeviceUpdate, UserOut
 from app.security import require_admin
+from app.notifiers import CHANNELS, test_channel
 from app.servicenow import test_connection
-from app.settings_store import all_settings, clamp_ping_interval, clean_company_name, set_setting, write_audit
+from app.settings_store import (
+    MASKED_SECRET,
+    all_settings,
+    clamp_ping_interval,
+    clean_company_name,
+    redact_settings,
+    set_setting,
+    write_audit,
+)
 
 router = APIRouter()
 
@@ -25,6 +34,26 @@ EDITABLE_SETTINGS = [
     "notify_on_access_request",
     "notify_email",
     "notify_downtime_only",
+    "notify_teams_enabled",
+    "notify_teams_webhook",
+    "notify_slack_enabled",
+    "notify_slack_webhook",
+    "notify_webhook_enabled",
+    "notify_webhook_url",
+    "notify_webhook_secret",
+    "notify_pagerduty_enabled",
+    "notify_pagerduty_routing_key",
+    "notify_discord_enabled",
+    "notify_discord_webhook",
+    "notify_telegram_enabled",
+    "notify_telegram_bot_token",
+    "notify_telegram_chat_id",
+    "notify_whatsapp_enabled",
+    "notify_whatsapp_token",
+    "notify_whatsapp_phone_id",
+    "notify_whatsapp_to",
+    "notify_whatsapp_template",
+    "notify_whatsapp_template_lang",
     "servicenow_enabled",
     "servicenow_url",
     "servicenow_user",
@@ -221,10 +250,7 @@ async def list_audit(
 
 @router.get("/api/admin/settings")
 async def get_settings(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
-    raw = await all_settings(db)
-    raw["servicenow_password"] = "••••••" if raw.get("servicenow_password") else ""
-    raw["smtp_password"] = "••••••" if raw.get("smtp_password") else ""
-    return {"settings": raw}
+    return {"settings": redact_settings(await all_settings(db))}
 
 
 @router.put("/api/admin/settings")
@@ -239,7 +265,7 @@ async def update_settings(
         if key not in incoming:
             continue
         value = incoming[key]
-        if value == "••••••":
+        if value == MASKED_SECRET:
             continue
         if key == "ping_interval":
             try:
@@ -254,13 +280,26 @@ async def update_settings(
         await set_setting(db, key, "" if value is None else str(value))
     await write_audit(db, "settings_update", "Updated application settings", admin, request)
     await db.commit()
-    return {"ok": True, "settings": await all_settings(db)}
+    return {"ok": True, "settings": redact_settings(await all_settings(db))}
 
 
 @router.post("/api/admin/servicenow/test")
 async def servicenow_test(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     result = test_connection(await all_settings(db))
     return {"result": result}
+
+
+@router.post("/api/admin/notifications/test")
+async def notification_test(
+    payload: dict,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    channel = str(payload.get("channel") or "").strip().lower()
+    if channel not in CHANNELS:
+        raise HTTPException(status_code=400, detail="Unknown notification channel")
+    result = await test_channel(channel, await all_settings(db))
+    return {"result": result, "channel": channel}
 
 
 @router.patch("/api/devices/{device_id}", response_model=DeviceOut)
