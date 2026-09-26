@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white" alt="Python 3.9+">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/MySQL-8.x-4479A1?logo=mysql&logoColor=white" alt="MySQL">
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose">
@@ -115,7 +115,7 @@ Change `SECRET_KEY` and database passwords in `.env` before any shared or produc
 
 ## Requirements
 
-- Python 3.9+ on the host (3.12 in the container image)
+- Python 3.10+ on the host (3.12 in the container image)
 - MySQL 8.x
 - Docker and Docker Compose, **or** Podman and Podman Compose (recommended)
 - `ping` on the host for Ping / ICMP monitors when you run uvicorn outside a container

@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 # Podman Containerfile — keep in sync with Dockerfile.
 
-FROM python:3.12-slim-bookworm AS builder
+
+FROM python:3.12-slim-trixie AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -13,11 +14,12 @@ WORKDIR /build
 COPY requirements.txt .
 RUN python -m venv /venv \
     && grep -vE '^pytest([=<>]|$)' requirements.txt > /tmp/requirements.runtime.txt \
-    && /venv/bin/pip install --upgrade pip \
-    && /venv/bin/pip install --no-cache-dir -r /tmp/requirements.runtime.txt
+    && /venv/bin/pip install --upgrade "pip>=26.1.2" "setuptools>=83.0.0" wheel \
+    && /venv/bin/pip install --no-cache-dir -r /tmp/requirements.runtime.txt \
+    && /venv/bin/pip uninstall -y pip setuptools wheel
 
 
-FROM python:3.12-slim-bookworm
+FROM python:3.12-slim-trixie
 
 ARG PINGWATCH_VERSION=1.2.0
 
@@ -38,10 +40,20 @@ LABEL org.opencontainers.image.title="Pingwatch" \
 WORKDIR /app
 
 RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
     && apt-get install -y --no-install-recommends \
+        ca-certificates \
         iputils-ping \
         traceroute \
     && rm -rf /var/lib/apt/lists/* \
+    && /usr/local/bin/python3 -m pip uninstall -y pip setuptools wheel \
+    && rm -rf /usr/local/lib/python*/ensurepip \
+              /usr/local/lib/python*/site-packages/pip* \
+              /usr/local/lib/python*/site-packages/setuptools* \
+              /usr/local/lib/python*/site-packages/wheel* \
+              /usr/local/bin/pip \
+              /usr/local/bin/pip3 \
+              /usr/local/bin/pip3.* \
     && groupadd --gid 1000 pingwatch \
     && useradd --create-home --uid 1000 --gid pingwatch --shell /usr/sbin/nologin pingwatch
 
