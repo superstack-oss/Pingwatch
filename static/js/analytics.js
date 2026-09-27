@@ -7,7 +7,7 @@ function donut(percent) {
   const offset = c - (value / 100) * c;
   return `<svg viewBox="0 0 120 120" class="donut-svg" aria-hidden="true">
     <circle cx="60" cy="60" r="${r}" fill="none" stroke="currentColor" stroke-width="12" opacity="0.12"></circle>
-    <circle cx="60" cy="60" r="${r}" fill="none" stroke="${value >= 99 ? "#16a34a" : value >= 80 ? "#16a34a" : "#d97706"}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}" transform="rotate(-90 60 60)"></circle>
+    <circle class="ring" cx="60" cy="60" r="${r}" fill="none" stroke="${value >= 99 ? "#16a34a" : value >= 80 ? "#16a34a" : "#d97706"}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}" transform="rotate(-90 60 60)"></circle>
     <text class="pct" x="60" y="58" text-anchor="middle">${Math.round(value)}%</text>
     <text class="sub" x="60" y="74" text-anchor="middle">healthy</text>
   </svg>`;
@@ -26,8 +26,9 @@ function areaChart(points) {
     const y = height - pad.b - (item.avg_rtt_ms / niceMax) * (height - pad.t - pad.b);
     return [x, y];
   });
-  const line = coords.map((pair) => `${pair[0].toFixed(1)},${pair[1].toFixed(1)}`).join(" ");
-  const area = `${pad.l},${height - pad.b} ${line} ${coords[coords.length - 1][0].toFixed(1)},${height - pad.b}`;
+  const line = chartLinePath(coords);
+  const area = chartAreaPath(coords, height - pad.b);
+  const last = coords[coords.length - 1];
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((frac) => {
     const y = height - pad.b - frac * (height - pad.t - pad.b);
     const label = Math.round(niceMax * frac);
@@ -51,10 +52,37 @@ function areaChart(points) {
       </linearGradient>
     </defs>
     ${ticks.join("")}
-    <polygon class="area" points="${area}"></polygon>
-    <polyline class="line" points="${line}"></polyline>
+    <path class="area" d="${area}"></path>
+    <path class="line" d="${line}"></path>
+    <circle class="chart-now" cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5"></circle>
     ${labels.join("")}
   </svg>`;
+}
+
+function bindHourlyHover(points) {
+  const host = document.querySelector("#hourly");
+  const usable = (points || []).filter((item) => item.avg_rtt_ms != null);
+  if (!host || !usable.length) return;
+  const width = 920;
+  const height = 280;
+  const pad = { l: 48, r: 16, t: 16, b: 36 };
+  const max = Math.max(...usable.map((item) => item.avg_rtt_ms), 1);
+  const niceMax = Math.ceil(max / 20) * 20 || 20;
+  bindLineChartHover(host, {
+    points: usable.map((item, index) => {
+      const x = pad.l + (index / Math.max(usable.length - 1, 1)) * (width - pad.l - pad.r);
+      const y = height - pad.b - (item.avg_rtt_ms / niceMax) * (height - pad.t - pad.b);
+      const parsed = parseDate(item.hour);
+      const when = parsed
+        ? parsed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: window.PINGWATCH_TZ })
+        : "";
+      const uptime = item.availability == null ? "" : ` · ${Number(item.availability).toFixed(1)}% up`;
+      return { x, y, title: ms(item.avg_rtt_ms), meta: `${when}${uptime}` };
+    }),
+    pad,
+    width,
+    height,
+  });
 }
 
 async function renderAnalytics() {
@@ -138,6 +166,7 @@ async function renderAnalytics() {
         compact: true,
       });
   document.querySelector("#hourly").innerHTML = areaChart(data.hourly || []);
+  bindHourlyHover(data.hourly || []);
   const map = document.querySelector("#health-map");
   if (!(data.health_map || []).length) {
     map.innerHTML = emptyState({ title: "No CIs to map", body: "Each square is a monitored configuration item.", compact: true });

@@ -150,7 +150,7 @@ def _page(name: str, request: Request, extra: Optional[dict] = None) -> HTMLResp
         "user_initials": _initials(user),
     }
     context.update(payload)
-    return templates.TemplateResponse(name, context)
+    return templates.TemplateResponse(request, name, context)
 
 
 @app.get("/login", response_class=HTMLResponse)

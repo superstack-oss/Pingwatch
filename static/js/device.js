@@ -156,7 +156,9 @@ function drawUptimeBars(points) {
     .map((point) => {
       const up = Boolean(point.is_up);
       const h = up ? 28 + Math.min(36, (point.rtt_ms || 0) / 8) : 10;
-      return `<i class="ub ${up ? "ok" : "miss"}" style="height:${h}px" title="${up ? ms(point.rtt_ms) : point.error || "down"}"></i>`;
+      const title = up ? ms(point.rtt_ms) : point.error || "Down";
+      const meta = clock(point.checked_at);
+      return `<i class="ub ${up ? "ok" : "miss"}" style="height:${h}px" data-tip="${escapeHtml(title)}" data-tip-meta="${escapeHtml(meta)}"></i>`;
     })
     .join("");
 }
@@ -218,8 +220,9 @@ function drawChart(points) {
     const y = height - pad.b - (point.rtt_ms / max) * (height - pad.t - pad.b);
     return [x, y];
   });
-  const line = coords.map((pair) => `${pair[0].toFixed(1)},${pair[1].toFixed(1)}`).join(" ");
-  const area = `${pad.l},${height - pad.b} ${line} ${coords[coords.length - 1][0].toFixed(1)},${height - pad.b}`;
+  const line = chartLinePath(coords);
+  const area = chartAreaPath(coords, height - pad.b);
+  const last = coords[coords.length - 1];
   const labels = usable
     .filter((_, index) => index === 0 || index === usable.length - 1 || index % Math.ceil(usable.length / 8) === 0)
     .map((point) => {
@@ -236,10 +239,23 @@ function drawChart(points) {
         <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.02"></stop>
       </linearGradient>
     </defs>
-    <polygon class="detail-area" points="${area}"></polygon>
-    <polyline class="line detail-line" points="${line}"></polyline>
+    <path class="detail-area" d="${area}"></path>
+    <path class="line detail-line" d="${line}"></path>
+    <circle class="chart-now detail-now" cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5"></circle>
     ${labels.join("")}
   </svg>`;
+  bindLineChartHover(host, {
+    points: usable.map((point, index) => ({
+      x: coords[index][0],
+      y: coords[index][1],
+      title: ms(point.rtt_ms),
+      meta: formatStamp(point.checked_at),
+    })),
+    pad,
+    width,
+    height,
+    accent: "detail",
+  });
 }
 
 async function loadDevice() {

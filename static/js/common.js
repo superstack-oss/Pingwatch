@@ -599,6 +599,170 @@ function emptyArt() {
   </svg>`;
 }
 
+function chartLinePath(coords) {
+  if (!coords.length) return "";
+  const fmt = (pair) => `${pair[0].toFixed(1)} ${pair[1].toFixed(1)}`;
+  if (coords.length === 1) return `M${fmt(coords[0])}`;
+  let d = `M${fmt(coords[0])}`;
+  for (let i = 1; i < coords.length; i += 1) {
+    const prev = coords[i - 1];
+    const point = coords[i];
+    const cx = ((prev[0] + point[0]) / 2).toFixed(1);
+    d += ` C${cx} ${prev[1].toFixed(1)}, ${cx} ${point[1].toFixed(1)}, ${fmt(point)}`;
+  }
+  return d;
+}
+
+function chartAreaPath(coords, baselineY) {
+  const line = chartLinePath(coords);
+  if (!line) return "";
+  const first = coords[0];
+  const last = coords[coords.length - 1];
+  return `${line} L${last[0].toFixed(1)} ${baselineY} L${first[0].toFixed(1)} ${baselineY} Z`;
+}
+
+function chartTipEl() {
+  let tip = document.getElementById("chart-tip");
+  if (tip) return tip;
+  tip = document.createElement("div");
+  tip.id = "chart-tip";
+  tip.className = "chart-tip";
+  tip.hidden = true;
+  document.body.appendChild(tip);
+  return tip;
+}
+
+function showChartTip(title, meta, clientX, clientY) {
+  const tip = chartTipEl();
+  tip.innerHTML = `<strong>${escapeHtml(title || "")}</strong>${meta ? `<small>${escapeHtml(meta)}</small>` : ""}`;
+  tip.hidden = false;
+  const width = tip.offsetWidth;
+  const height = tip.offsetHeight;
+  let left = clientX + 14;
+  let top = clientY - height - 12;
+  if (left + width > window.innerWidth - 8) left = clientX - width - 14;
+  if (top < 8) top = clientY + 16;
+  if (left < 8) left = 8;
+  tip.style.left = `${Math.round(left)}px`;
+  tip.style.top = `${Math.round(top)}px`;
+}
+
+function hideChartTip() {
+  const tip = document.getElementById("chart-tip");
+  if (tip) tip.hidden = true;
+  document.querySelectorAll(".bar.is-hot, .ub.is-hot").forEach((node) => node.classList.remove("is-hot"));
+  document.querySelectorAll(".chart-hover-layer").forEach((node) => {
+    node.style.display = "none";
+  });
+}
+
+function svgPoint(svg, event) {
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return { x: 0, y: 0 };
+  const point = svg.createSVGPoint();
+  point.x = event.clientX;
+  point.y = event.clientY;
+  const local = point.matrixTransform(ctm.inverse());
+  return { x: local.x, y: local.y };
+}
+
+function bindLineChartHover(host, config) {
+  if (!host) return;
+  host._chartHover = config;
+  const svg = host.querySelector("svg");
+  if (!svg || !config.points.length) return;
+  const ns = "http://www.w3.org/2000/svg";
+  let layer = svg.querySelector(".chart-hover-layer");
+  if (!layer) {
+    layer = document.createElementNS(ns, "g");
+    layer.setAttribute("class", "chart-hover-layer");
+    layer.setAttribute("pointer-events", "none");
+    const cross = document.createElementNS(ns, "line");
+    cross.setAttribute("class", "chart-cross");
+    const dot = document.createElementNS(ns, "circle");
+    dot.setAttribute("class", config.accent === "detail" ? "chart-hover-dot detail" : "chart-hover-dot");
+    dot.setAttribute("r", "4.5");
+    layer.appendChild(cross);
+    layer.appendChild(dot);
+    svg.appendChild(layer);
+  }
+  layer.style.display = "none";
+  let hit = svg.querySelector(".chart-hit");
+  if (!hit) {
+    hit = document.createElementNS(ns, "rect");
+    hit.setAttribute("class", "chart-hit");
+    svg.appendChild(hit);
+  }
+  hit.setAttribute("x", String(config.pad.l));
+  hit.setAttribute("y", String(config.pad.t));
+  hit.setAttribute("width", String(config.width - config.pad.l - config.pad.r));
+  hit.setAttribute("height", String(config.height - config.pad.t - config.pad.b));
+  if (host.dataset.chartHoverBound === "1") return;
+  host.dataset.chartHoverBound = "1";
+  host.addEventListener("pointermove", (event) => {
+    const cfg = host._chartHover;
+    const chart = host.querySelector("svg");
+    if (!cfg || !chart || !cfg.points.length) return;
+    const local = svgPoint(chart, event);
+    let best = cfg.points[0];
+    let dist = Math.abs(best.x - local.x);
+    cfg.points.forEach((point) => {
+      const next = Math.abs(point.x - local.x);
+      if (next < dist) {
+        dist = next;
+        best = point;
+      }
+    });
+    const hover = chart.querySelector(".chart-hover-layer");
+    const cross = hover && hover.querySelector(".chart-cross");
+    const dot = hover && hover.querySelector(".chart-hover-dot");
+    if (hover) hover.style.display = "";
+    if (cross) {
+      cross.setAttribute("x1", best.x.toFixed(1));
+      cross.setAttribute("x2", best.x.toFixed(1));
+      cross.setAttribute("y1", String(cfg.pad.t));
+      cross.setAttribute("y2", String(cfg.height - cfg.pad.b));
+    }
+    if (dot) {
+      dot.setAttribute("cx", best.x.toFixed(1));
+      dot.setAttribute("cy", best.y.toFixed(1));
+    }
+    showChartTip(best.title, best.meta, event.clientX, event.clientY);
+  });
+  host.addEventListener("pointerleave", () => {
+    const hover = host.querySelector(".chart-hover-layer");
+    if (hover) hover.style.display = "none";
+    hideChartTip();
+  });
+}
+
+function initChartHoverTips() {
+  if (document.documentElement.dataset.chartTips === "1") return;
+  document.documentElement.dataset.chartTips = "1";
+  const overTip = (event) => {
+    const node = event.target.closest("[data-tip]");
+    if (!node) return;
+    document.querySelectorAll(".bar.is-hot, .ub.is-hot").forEach((bar) => bar.classList.remove("is-hot"));
+    node.classList.add("is-hot");
+    showChartTip(node.dataset.tip, node.dataset.tipMeta, event.clientX, event.clientY);
+  };
+  document.addEventListener("pointerover", overTip);
+  document.addEventListener("pointermove", (event) => {
+    const node = event.target.closest("[data-tip]");
+    if (!node) return;
+    showChartTip(node.dataset.tip, node.dataset.tipMeta, event.clientX, event.clientY);
+  });
+  document.addEventListener("pointerout", (event) => {
+    const from = event.target.closest("[data-tip]");
+    if (!from) return;
+    const to = event.relatedTarget && event.relatedTarget.closest && event.relatedTarget.closest("[data-tip]");
+    if (to === from) return;
+    from.classList.remove("is-hot");
+    if (!to) hideChartTip();
+  });
+  document.addEventListener("scroll", hideChartTip, { capture: true, passive: true });
+}
+
 function emptyState({ title, body, actionLabel, actionId, compact }) {
   const button = actionLabel
     ? `<button type="button" class="empty-cta"${actionId ? ` id="${actionId}"` : ""}>${escapeHtml(actionLabel)}</button>`
@@ -919,6 +1083,7 @@ function initShell() {
   initUserMenu();
   initNotifications();
   initViewTransitions();
+  initChartHoverTips();
 }
 
 function runViewTransition(update) {

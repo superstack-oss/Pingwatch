@@ -28,10 +28,11 @@ function spark(history) {
     .map((item) => {
       const height = item == null ? 3 : Math.max(4, Math.round((item / max) * 18));
       const cls = item == null ? "miss" : "ok";
-      return `<i class="bar ${cls}" style="height:${height}px"></i>`;
+      const tip = item == null ? "No sample" : ms(item);
+      return `<i class="bar ${cls}" style="height:${height}px" data-tip="${escapeHtml(tip)}"></i>`;
     })
     .join("");
-  return `<span class="spark">${bars || '<i class="bar miss" style="height:3px"></i>'}</span>`;
+  return `<span class="spark">${bars || '<i class="bar miss" style="height:3px" data-tip="No sample"></i>'}</span>`;
 }
 
 function skeleton() {
