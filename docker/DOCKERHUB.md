@@ -49,11 +49,12 @@ The first sign-in forces a password change.
 
 ## What is in the image
 
-- Python 3.12, FastAPI/uvicorn
+- Python 3.12 on a Docker Hardened Image (`dhi.io/python:3.12-debian13`), FastAPI/uvicorn
 - `app/`, `templates/`, `static/`
 - `ping` and `traceroute` for host checks
-- Non-root user `pingwatch` (uid 1000)
+- Non-root user `pingwatch` (uid 1000); the runtime image has no shell or package manager
 - Health check: `GET /api/health`
+- SBOM and provenance attestations on images published by CI
 
 MySQL is **not** in this image. Use `mysql:8.4` as in `docker-compose.image.yml`.
 

@@ -516,6 +516,21 @@ read_env_value() {
   awk -F= -v key="$key" '$1==key { sub(/^[^=]+=/,""); print; exit }' "$INSTALL_DIR/.env" 2>/dev/null || true
 }
 
+require_dhi_base() {
+  # Local builds pull dhi.io/python. Community images need a Docker ID.
+  local probe=()
+  if [ "$ENGINE" = "podman" ]; then
+    probe=(podman manifest inspect dhi.io/python:3.12-debian13)
+  elif docker info >/dev/null 2>&1; then
+    probe=(docker manifest inspect dhi.io/python:3.12-debian13)
+  else
+    probe=(sudo docker manifest inspect dhi.io/python:3.12-debian13)
+  fi
+  if ! "${probe[@]}" >/dev/null 2>&1; then
+    fail "Local builds use Docker Hardened Images. Run '$ENGINE login dhi.io' with your Docker Hub username and access token, then re-run."
+  fi
+}
+
 wait_health() {
   local port="$1"
   local tries=45
@@ -574,12 +589,15 @@ start_stack() {
 
   if [ "$pulled" -eq 1 ]; then
     compose up -d --remove-orphans --no-build
-  elif [ "$ENGINE" = "podman" ]; then
-    COMPOSE_FILES=(-f podman-compose.yml)
-    compose up --build -d --remove-orphans
   else
-    COMPOSE_FILES=(-f docker-compose.yml)
-    compose up --build -d --remove-orphans
+    require_dhi_base
+    if [ "$ENGINE" = "podman" ]; then
+      COMPOSE_FILES=(-f podman-compose.yml)
+      compose up --build -d --remove-orphans
+    else
+      COMPOSE_FILES=(-f docker-compose.yml)
+      compose up --build -d --remove-orphans
+    fi
   fi
   compose ps
   local port

@@ -124,9 +124,9 @@ Change `SECRET_KEY` and database passwords in `.env` before any shared or produc
 
 The web image is published to [Docker Hub](https://hub.docker.com/r/superstackinc/pingwatch) as `superstackinc/pingwatch` and to GHCR as `ghcr.io/superstack-oss/pingwatch`. Tags follow `VERSION` (`1.2.0`, `latest` on `main`, and `sha-…`).
 
-GitHub Actions workflow `.github/workflows/publish-image.yml` builds `linux/amd64` and `linux/arm64`. Add repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` so Hub is updated; GHCR publishes with `GITHUB_TOKEN`. Paste `docker/DOCKERHUB.md` into the Hub repository overview.
+GitHub Actions workflow `.github/workflows/publish-image.yml` builds `linux/amd64` and `linux/arm64` from Docker Hardened Images (`dhi.io/python:3.12-debian13`), with SBOM and provenance attestations. Add repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` so the workflow can pull the hardened bases and push to Hub; GHCR publishes with `GITHUB_TOKEN`. Paste `docker/DOCKERHUB.md` into the Hub repository overview.
 
-`install.sh` pulls `superstackinc/pingwatch:<version>` when that tag exists, and otherwise builds from the Dockerfile.
+`install.sh` pulls `superstackinc/pingwatch:<version>` when that tag exists, and otherwise builds from the Dockerfile. A local build needs `docker login dhi.io` (or `podman login dhi.io`) using a Docker Hub account.
 
 ## Installer
 
@@ -224,7 +224,7 @@ Point `.env` at MySQL. Host `.env.example` publishes MySQL on **3307** so it doe
 | `DEFAULT_ADMIN_USERNAME` | `admin` | First-boot admin user |
 | `DEFAULT_ADMIN_PASSWORD` | `Password@123` | First-boot admin password |
 
-The Docker image is a multi-stage Python 3.12 build, runs as a non-root user, includes `GET /api/health`, and shuts down uvicorn gracefully.
+The Docker image is a multi-stage Python 3.12 build on Docker Hardened Images. It runs as non-root user `pingwatch` (uid 1000), includes `GET /api/health`, and shuts down uvicorn gracefully.
 
 ## Project layout
 

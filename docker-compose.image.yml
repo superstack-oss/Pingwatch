@@ -8,6 +8,8 @@ name: Pingwatch
 
 services:
   mysql:
+    # Official MySQL image. DHI MySQL does not create MYSQL_DATABASE / MYSQL_USER
+    # and has no shell, so the existing healthcheck and first-boot setup would break.
     image: docker.io/library/mysql:8.4
     container_name: MySQL-Pingwatch-DB
     hostname: mysql
